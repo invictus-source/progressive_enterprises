@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFrame, QWidget, QSizePolicy, QApplication
@@ -191,7 +192,7 @@ class LoginWindow(QDialog):
         self.login_btn.clicked.connect(self._do_login)
         card_layout.addWidget(self.login_btn)
 
-        self.footer_lbl = QLabel(f"© 2026 {config.APP_NAME}  •  v{config.APP_VERSION}\nDeveloped by {config.DEVELOPER_COMPANY}")
+        self.footer_lbl = QLabel(f"© {date.today().year} {config.APP_NAME}  •  v{config.APP_VERSION}\nDeveloped by {config.DEVELOPER_COMPANY}")
         self.footer_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.footer_lbl.setWordWrap(True)
         card_layout.addWidget(self.footer_lbl)

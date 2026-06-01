@@ -1,17 +1,26 @@
 import os
 import sys
 import json
+from dotenv import load_dotenv
 
-APP_NAME        = "Progressive Enterprises"
-APP_FULL_NAME   = "Progressive Enterprises – Business Suite"
-APP_VERSION     = "1.0.0"
-APP_PUBLISHER   = "Progressive Enterprises"
-DEVELOPER_COMPANY = "Emberflock Labs"
+_base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+_dotenv_path = os.path.join(_base, ".env")
+if os.path.exists(_dotenv_path):
+    load_dotenv(_dotenv_path)
+elif os.path.exists(".env"):
+    load_dotenv(".env")
 
-_default_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Roaming",
-                                "ProgressiveEnterprises", "data")
-_launcher_json = os.path.join(os.path.expanduser("~"), "AppData", "Roaming",
-                              "ProgressiveEnterprises", "launcher.json")
+APP_NAME          = os.getenv("APP_NAME", "Progressive Enterprises")
+APP_FULL_NAME     = os.getenv("APP_FULL_NAME", "Progressive Enterprises – Business Suite")
+APP_VERSION       = os.getenv("APP_VERSION", "1.0.0")
+APP_PUBLISHER     = os.getenv("APP_PUBLISHER", "Progressive Enterprises")
+DEVELOPER_COMPANY = os.getenv("DEVELOPER_COMPANY", "Emberflock Labs")
+
+DATA_DIR_NAME = os.getenv("DATA_DIR_NAME", "ProgressiveEnterprises")
+DB_NAME       = os.getenv("DB_NAME", "progressive.db")
+
+_dev_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", DATA_DIR_NAME, "data")
+_launcher_json = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", DATA_DIR_NAME, "launcher.json")
 
 _appdata = os.environ.get("PROGRESSIVE_DATA_DIR")
 
@@ -23,14 +32,14 @@ if not _appdata and os.path.exists(_launcher_json):
         pass
 
 if not _appdata:
-    _appdata = _default_appdata
+    _appdata = _dev_appdata
 
-DATA_DIR     = _appdata
-DB_PATH      = os.path.join(DATA_DIR, "progressive.db")
-INVOICES_DIR = os.path.join(DATA_DIR, "invoices")
-EXPORTS_DIR  = os.path.join(DATA_DIR, "exports")
-BACKUPS_DIR  = os.path.join(DATA_DIR, "backups")
-PREFS_FILE   = os.path.join(DATA_DIR, "prefs.json")
+DATA_DIR      = _appdata
+DB_PATH       = os.path.join(DATA_DIR, DB_NAME)
+INVOICES_DIR  = os.path.join(DATA_DIR, "invoices")
+EXPORTS_DIR   = os.path.join(DATA_DIR, "exports")
+BACKUPS_DIR   = os.path.join(DATA_DIR, "backups")
+PREFS_FILE    = os.path.join(DATA_DIR, "prefs.json")
 SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 
 for _d in [DATA_DIR, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR]:
@@ -38,25 +47,25 @@ for _d in [DATA_DIR, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR]:
 
 def set_custom_data_dir(new_dir: str):
     global DATA_DIR, DB_PATH, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR, PREFS_FILE, SETTINGS_FILE
-    
+
     os.makedirs(os.path.dirname(_launcher_json), exist_ok=True)
     with open(_launcher_json, "w", encoding="utf-8") as f:
         json.dump({"custom_data_dir": new_dir}, f)
-        
+
     DATA_DIR = new_dir
-    DB_PATH      = os.path.join(DATA_DIR, "progressive.db")
-    INVOICES_DIR = os.path.join(DATA_DIR, "invoices")
-    EXPORTS_DIR  = os.path.join(DATA_DIR, "exports")
-    BACKUPS_DIR  = os.path.join(DATA_DIR, "backups")
-    PREFS_FILE   = os.path.join(DATA_DIR, "prefs.json")
+    DB_PATH       = os.path.join(DATA_DIR, DB_NAME)
+    INVOICES_DIR  = os.path.join(DATA_DIR, "invoices")
+    EXPORTS_DIR   = os.path.join(DATA_DIR, "exports")
+    BACKUPS_DIR   = os.path.join(DATA_DIR, "backups")
+    PREFS_FILE    = os.path.join(DATA_DIR, "prefs.json")
     SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
-    
+
     for _d in [DATA_DIR, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR]:
         os.makedirs(_d, exist_ok=True)
 
-DEV_USERNAME  = "ayushjha"
-DEV_PASSWORD  = "Ayush@2106"
-DEV_FULL_NAME = "Ayush Jha"
+DEV_USERNAME  = os.getenv("DEV_USERNAME", "dev")
+DEV_PASSWORD  = os.getenv("DEV_PASSWORD", "changeme")
+DEV_FULL_NAME = os.getenv("DEV_FULL_NAME", "Developer")
 
 def _load_settings() -> dict:
     if os.path.exists(SETTINGS_FILE):
@@ -73,17 +82,15 @@ def _save_settings(data: dict):
 
 _settings = _load_settings()
 
-COMPANY_NAME        = _settings.get("company_name",        "Progressive Enterprises")
-COMPANY_ADDRESS     = _settings.get("company_address",     "Shop No. 1, Main Market, Your City – 000000")
-COMPANY_PHONE       = _settings.get("company_phone",       "+91-XXXXXXXXXX")
-COMPANY_EMAIL       = _settings.get("company_email",       "info@progressiveenterprises.com")
-COMPANY_GSTIN       = _settings.get("company_gstin",       "00AAAAA0000A1Z5")
-COMPANY_STATE       = _settings.get("company_state",       "Rajasthan")
-COMPANY_STATE_CODE  = _settings.get("company_state_code",  "08")
+COMPANY_NAME        = _settings.get("company_name",        os.getenv("COMPANY_NAME",        "Progressive Enterprises"))
+COMPANY_ADDRESS     = _settings.get("company_address",     os.getenv("COMPANY_ADDRESS",     "Shop No. 1, Main Market, Your City – 000000"))
+COMPANY_PHONE       = _settings.get("company_phone",       os.getenv("COMPANY_PHONE",       "+91-XXXXXXXXXX"))
+COMPANY_EMAIL       = _settings.get("company_email",       os.getenv("COMPANY_EMAIL",       "info@progressiveenterprises.com"))
+COMPANY_GSTIN       = _settings.get("company_gstin",       os.getenv("COMPANY_GSTIN",       "00AAAAA0000A1Z5"))
+COMPANY_STATE       = _settings.get("company_state",       os.getenv("COMPANY_STATE",       "Rajasthan"))
+COMPANY_STATE_CODE  = _settings.get("company_state_code",  os.getenv("COMPANY_STATE_CODE",  "08"))
 
 GST_SLABS = [0, 5, 12, 18, 28]
-
-DB_NAME = "progressive.db"
 
 def is_first_run() -> bool:
     return not os.path.exists(DB_PATH)
@@ -131,6 +138,5 @@ def save_prefs(data: dict):
     with open(PREFS_FILE, "w", encoding="utf-8") as f:
         json.dump(curr, f, indent=2)
 
-_base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-ASSETS_DIR  = os.path.join(_base, "assets")
-LOGO_PATH   = os.path.join(ASSETS_DIR, "logo.png")
+ASSETS_DIR = os.path.join(_base, "assets")
+LOGO_PATH  = os.path.join(ASSETS_DIR, "logo.png")

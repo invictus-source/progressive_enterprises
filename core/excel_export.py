@@ -55,7 +55,7 @@ def _auto_col_widths(ws):
 
 
 def _out_path(name: str) -> str:
-    out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "exports")
+    out_dir = config.EXPORTS_DIR
     os.makedirs(out_dir, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(out_dir, f"{name}_{stamp}.xlsx")

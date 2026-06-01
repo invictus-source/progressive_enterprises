@@ -10,6 +10,7 @@
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env
 python main.py
 ```
 
@@ -22,7 +23,8 @@ On first launch, the setup wizard will guide you through creating an admin accou
 ```
 progressive/
 ├── main.py                     Application entry point
-├── config.py                   Company config, paths, credentials, settings
+├── config.py                   Paths, settings (secrets loaded from .env)
+├── .env.example                Template for environment variables
 ├── requirements.txt            Python dependencies
 ├── build_installer.ps1          PyInstaller + Inno Setup build script
 ├── progressive.iss             Inno Setup installer config
@@ -181,19 +183,37 @@ All monetary fields use `Float` for INR values. Relationships use SQLAlchemy `re
 
 ## Configuration
 
-All configuration lives in `config.py`:
+All secrets and configurable values are isolated in a `.env` file (loaded via `python-dotenv`). Copy `.env.example` to `.env` and fill in your values:
 
-| Constant | Default | Description |
-|---|---|---|
-| `APP_NAME` | `Progressive Enterprises` | Window title and app identity |
-| `APP_VERSION` | `1.0.0` | Displayed in About |
-| `DATA_DIR` | `%APPDATA%/ProgressiveEnterprises/data` | Database, invoices, exports live here |
-| `DEV_USERNAME` | `ayushjha` | Developer account username |
-| `DEV_PASSWORD` | `Ayush@2106` | Developer account password |
-| `GST_SLABS` | `[0, 5, 12, 18, 28]` | Available GST rate options |
-| `COMPANY_*` | Placeholder values | Editable via Settings window |
+```bash
+cp .env.example .env
+```
 
-Data paths can be overridden with the `PROGRESSIVE_DATA_DIR` environment variable, or configured via the launcher JSON file stored in AppData.
+### Environment Variables
+
+| Variable | Description |
+|---|---|
+| `APP_NAME` | Application display name |
+| `APP_FULL_NAME` | Full application name with subtitle |
+| `APP_VERSION` | Version string shown in About |
+| `APP_PUBLISHER` | Publisher name |
+| `DEVELOPER_COMPANY` | Developer company name shown in footer |
+| `DEV_USERNAME` | Developer account username |
+| `DEV_PASSWORD` | Developer account password |
+| `DEV_FULL_NAME` | Developer account display name |
+| `DB_NAME` | SQLite database filename |
+| `DATA_DIR_NAME` | Folder name for AppData data directory |
+| `COMPANY_NAME` | Default company name (overridden by settings.json after setup) |
+| `COMPANY_ADDRESS` | Default address |
+| `COMPANY_PHONE` | Default phone |
+| `COMPANY_EMAIL` | Default email |
+| `COMPANY_GSTIN` | Default GST identification number |
+| `COMPANY_STATE` | Default state |
+| `COMPANY_STATE_CODE` | Default state code |
+
+Company details are initially loaded from `.env` defaults, then overridden by `settings.json` after the setup wizard runs.
+
+Data paths can also be overridden with the `PROGRESSIVE_DATA_DIR` environment variable, or configured via the launcher JSON file stored in AppData.
 
 ---
 

@@ -23,7 +23,7 @@ WHITE = colors.white
 
 
 def generate_invoice(sale) -> str:
-    out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "invoices")
+    out_dir = config.INVOICES_DIR
     os.makedirs(out_dir, exist_ok=True)
     filename = os.path.join(out_dir, f"{sale.invoice_no}.pdf")
 

@@ -186,7 +186,7 @@ class SettingsPage(QWidget):
             (f"Developed by {config.DEVELOPER_COMPANY}", "font-size: 13px; font-weight: 700; color: #60a5fa;"),
             (f"Built for {config.APP_PUBLISHER}", "color: #8b949e; font-size: 11px;"),
             ("", ""),
-            (f"© 2026 {config.DEVELOPER_COMPANY}. All rights reserved.", "color: #4E6D8C; font-size: 10px;"),
+            (f"© {__import__('datetime').date.today().year} {config.DEVELOPER_COMPANY}. All rights reserved.", "color: #4E6D8C; font-size: 10px;"),
         ]:
             lbl = QLabel(text); lbl.setStyleSheet(style + " background:transparent;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)

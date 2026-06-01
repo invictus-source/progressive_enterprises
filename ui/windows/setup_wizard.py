@@ -333,7 +333,7 @@ class SetupWizard(QDialog):
 
         note = QLabel(
             "⚠️  Changing the data location requires restarting the setup.\n"
-            "The developer account (dev / dev@2024) is always available as a fallback."
+            f"The developer account ({config.DEV_USERNAME}) is always available as a fallback."
         )
         note.setStyleSheet("color: #F59E0B; font-size: 11px; background: transparent;")
         note.setWordWrap(True)
@@ -438,7 +438,7 @@ class SetupWizard(QDialog):
         d = QFileDialog.getExistingDirectory(self, "Choose Data Folder", config.DATA_DIR)
         if d:
             import os
-            new_dir = os.path.join(d, "ProgressiveEnterprises", "data")
+            new_dir = os.path.join(d, config.DATA_DIR_NAME, "data")
             config.set_custom_data_dir(new_dir)
             self.data_path_lbl.setText(new_dir)
 

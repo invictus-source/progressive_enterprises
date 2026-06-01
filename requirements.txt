@@ -7,3 +7,4 @@ matplotlib>=3.8
 Pillow>=10.0
 qtawesome>=1.4
 PyInstaller>=6.0
+python-dotenv>=1.0
