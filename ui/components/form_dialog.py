@@ -1,0 +1,235 @@
+"""
+Progressive Enterprises – Generic Form Dialog Base Class
+Responsive dialog that adapts to screen size.
+"""
+
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QFrame, QScrollArea, QWidget, QSizePolicy,
+    QApplication, QLineEdit, QComboBox, QTextEdit
+)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont, QScreen
+
+
+class FormDialog(QDialog):
+    """
+    Base dialog with a standardised header, scrollable body, and footer buttons.
+    Responsive to screen size - adapts width and enables scrolling for forms.
+    Subclass this for every add/edit form.
+
+    Usage:
+        class AddCustomerDialog(FormDialog):
+            def __init__(self):
+                super().__init__("Add Customer", "➕ New Customer", width=520)
+                # Add form fields to self.body_layout
+                self.name_edit = QLineEdit()
+                self.add_field("Full Name *", self.name_edit)
+                self.finalize()
+
+            def _collect(self):
+                return {"name": self.name_edit.text().strip()}
+    """
+
+    def __init__(self, title: str, subtitle: str = "",
+                 width: int = 520, height: int = 0, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self._preferred_width = width
+        self._preferred_height = height if height and height > 0 else 0
+        self._result_data = None
+        self._build_chrome(title, subtitle)
+        self._adjust_size()
+        
+    def _adjust_size(self):
+        screen = QApplication.primaryScreen()
+        if screen:
+            available = screen.availableGeometry()
+            max_width = int(available.width() * 0.92)
+            max_height = int(available.height() * 0.88)
+            
+            dialog_width = min(self._preferred_width, max_width)
+            self.setMinimumWidth(min(360, dialog_width))
+            self.setMaximumWidth(max_width)
+            
+            if self._preferred_height:
+                dialog_height = min(self._preferred_height, max_height)
+                self.setMaximumHeight(max_height)
+            else:
+                self.setMaximumHeight(max_height)
+
+    def _build_chrome(self, title: str, subtitle: str):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Header - smaller on compact screens
+        header = QWidget()
+        header.setObjectName("DialogHeader")
+        self._header = header
+        h_layout = QVBoxLayout(header)
+        h_layout.setContentsMargins(14, 8, 14, 8)
+        h_layout.setSpacing(2)
+
+        title_lbl = QLabel(title)
+        title_lbl.setObjectName("DialogHeaderTitle")
+        title_lbl.setWordWrap(True)
+        h_layout.addWidget(title_lbl)
+
+        if subtitle:
+            sub_lbl = QLabel(subtitle)
+            sub_lbl.setObjectName("DialogHeaderSub")
+            h_layout.addWidget(sub_lbl)
+
+        root.addWidget(header)
+
+        # Error message container (for inline validation errors)
+        self.error_frame = QFrame()
+        self.error_frame.setObjectName("ToastError")
+        self.error_frame.setStyleSheet("""
+            QFrame { background-color: #7F1D1D; border-radius: 8px; padding: 8px; margin: 4px 0; }
+            QLabel { color: #FCA5A5; }
+        """)
+        error_layout = QHBoxLayout(self.error_frame)
+        error_layout.setContentsMargins(12, 8, 12, 8)
+        error_layout.setSpacing(8)
+        
+        self.error_icon = QLabel("⚠")
+        self.error_icon.setStyleSheet("font-size: 14px;")
+        self.error_label = QLabel()
+        self.error_label.setWordWrap(True)
+        error_layout.addWidget(self.error_icon)
+        error_layout.addWidget(self.error_label, 1)
+        
+        self.close_error_btn = QPushButton("×")
+        self.close_error_btn.setFixedSize(20, 20)
+        self.close_error_btn.setStyleSheet("""
+            QPushButton { background: transparent; border: none; color: #FCA5A5; font-size: 16px; }
+            QPushButton:hover { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        """)
+        self.close_error_btn.clicked.connect(self._hide_error)
+        error_layout.addWidget(self.close_error_btn)
+        
+        self.error_frame.hide()
+        root.addWidget(self.error_frame)
+
+        # Separator
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        root.addWidget(sep)
+
+        # Scrollable body - critical for small screens
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+
+        body_wrapper = QWidget()
+        body_wrapper.setObjectName("DialogBody")
+        self.body_layout = QVBoxLayout(body_wrapper)
+        self.body_layout.setContentsMargins(14, 12, 14, 12)
+        self.body_layout.setSpacing(8)
+
+        scroll.setWidget(body_wrapper)
+        root.addWidget(scroll, 1)
+
+        # Footer - compact on small screens
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.HLine)
+        root.addWidget(sep2)
+
+        footer = QWidget()
+        footer.setObjectName("DialogFooter")
+        f_layout = QHBoxLayout(footer)
+        f_layout.setContentsMargins(14, 8, 14, 8)
+        f_layout.setSpacing(8)
+        f_layout.addStretch()
+
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.setMinimumHeight(32)
+        self.cancel_btn.clicked.connect(self.reject)
+
+        self.save_btn = QPushButton("Save")
+        self.save_btn.setObjectName("PrimaryBtn")
+        self.save_btn.setMinimumHeight(32)
+        self.save_btn.setMinimumWidth(80)
+        self.save_btn.clicked.connect(self._on_save)
+
+        f_layout.addWidget(self.cancel_btn)
+        f_layout.addWidget(self.save_btn)
+        root.addWidget(footer)
+
+    def _show_error(self, message: str):
+        self.error_label.setText(message)
+        self.error_frame.show()
+        
+    def _hide_error(self):
+        self.error_frame.hide()
+
+    # ── Helpers for subclasses ─────────────────────────────────────────────
+
+    def add_field(self, label: str, widget, hint: str = ""):
+        """Add a label + widget row to the form body."""
+        lbl = QLabel(label)
+        lbl.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: bold;")
+        self.body_layout.addWidget(lbl)
+        
+        # Make input widgets expand properly
+        if isinstance(widget, (QLineEdit, QComboBox, QTextEdit)):
+            widget.setMinimumWidth(200)
+        
+        self.body_layout.addWidget(widget)
+        if hint:
+            h = QLabel(hint)
+            h.setStyleSheet("color: #6e7681; font-size: 10px;")
+            self.body_layout.addWidget(h)
+
+    def add_row(self, *widgets):
+        """Add multiple widgets side by side - will stack on small screens."""
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        for w in widgets:
+            row.addWidget(w, 1)
+        self.body_layout.addLayout(row)
+
+    def add_separator(self):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        self.body_layout.addWidget(sep)
+
+    def add_section(self, title: str):
+        lbl = QLabel(title)
+        lbl.setStyleSheet("font-size: 12px; font-weight: bold; color: #60a5fa; padding-top: 6px;")
+        self.body_layout.addWidget(lbl)
+
+    def finalize(self):
+        """Call at end of subclass __init__ to add stretch."""
+        self.body_layout.addStretch()
+
+    # ── Save flow ─────────────────────────────────────────────────────────
+
+    def _on_save(self):
+        """Override in subclass, or let _collect() drive it."""
+        self._hide_error()
+        try:
+            data = self._collect()
+            if data is not None:
+                self._result_data = data
+                self.accept()
+        except ValidationError as e:
+            self._show_error(str(e))
+
+    def _collect(self) -> dict | None:
+        """Override in subclass. Return dict of form data or raise ValidationError."""
+        return {}
+
+    def get_data(self) -> dict | None:
+        """After exec() == Accepted, call this to get form data."""
+        return self._result_data
+
+
+class ValidationError(Exception):
+    """Raise from _collect() to show a validation warning."""
+    pass
