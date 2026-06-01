@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – SQLAlchemy ORM Models
-All database tables defined here.
-"""
-
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Date,
@@ -12,8 +7,6 @@ from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
-
-# ─── Users & Auth ──────────────────────────────────────────────────────────────
 
 class User(Base):
     __tablename__ = "users"
@@ -30,8 +23,6 @@ class User(Base):
     def __repr__(self):
         return f"<User {self.username} ({self.role})>"
 
-
-# ─── Customers ─────────────────────────────────────────────────────────────────
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -58,8 +49,6 @@ class Customer(Base):
         return f"<Customer {self.name}>"
 
 
-# ─── Vendors ───────────────────────────────────────────────────────────────────
-
 class Vendor(Base):
     __tablename__ = "vendors"
 
@@ -84,8 +73,6 @@ class Vendor(Base):
     def __repr__(self):
         return f"<Vendor {self.name}>"
 
-
-# ─── Inventory ─────────────────────────────────────────────────────────────────
 
 class Category(Base):
     __tablename__ = "categories"
@@ -127,8 +114,6 @@ class Product(Base):
         return f"<Product {self.name}>"
 
 
-# ─── Sales / POS ───────────────────────────────────────────────────────────────
-
 class Sale(Base):
     __tablename__ = "sales"
 
@@ -136,9 +121,9 @@ class Sale(Base):
     invoice_no = Column(String(32), unique=True, nullable=False)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     sale_date = Column(DateTime, default=datetime.now)
-    subtotal = Column(Float, default=0.0)          # pre-GST pre-discount
+    subtotal = Column(Float, default=0.0)
     discount_amount = Column(Float, default=0.0)
-    taxable_amount = Column(Float, default=0.0)    # after discount, pre-GST
+    taxable_amount = Column(Float, default=0.0)
     cgst_amount = Column(Float, default=0.0)
     sgst_amount = Column(Float, default=0.0)
     igst_amount = Column(Float, default=0.0)
@@ -166,9 +151,9 @@ class SaleItem(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    product_name = Column(String(128), nullable=False)   # snapshot at time of sale
+    product_name = Column(String(128), nullable=False)
     qty = Column(Integer, nullable=False, default=1)
-    unit_price = Column(Float, nullable=False)           # selling price at time of sale
+    unit_price = Column(Float, nullable=False)
     discount_pct = Column(Float, default=0.0)
     gst_rate = Column(Float, default=18.0)
     taxable_amount = Column(Float, default=0.0)
@@ -179,14 +164,12 @@ class SaleItem(Base):
     product = relationship("Product", back_populates="sale_items")
 
 
-# ─── Purchases / GRN ───────────────────────────────────────────────────────────
-
 class Purchase(Base):
     __tablename__ = "purchases"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     grn_no = Column(String(32), unique=True, nullable=False)
-    bill_no = Column(String(64), nullable=True)       # vendor's bill number
+    bill_no = Column(String(64), nullable=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True)
     purchase_date = Column(DateTime, default=datetime.now)
     subtotal = Column(Float, default=0.0)
@@ -228,8 +211,6 @@ class PurchaseItem(Base):
     purchase = relationship("Purchase", back_populates="items")
     product = relationship("Product", back_populates="purchase_items")
 
-
-# ─── Finance Providers & EMI ───────────────────────────────────────────────────
 
 class FinanceProvider(Base):
     __tablename__ = "finance_providers"
@@ -287,15 +268,11 @@ class EMIPayment(Base):
     emi_record = relationship("EMIRecord", back_populates="emi_payments")
 
 
-# ─── Payments ──────────────────────────────────────────────────────────────────
-
 class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     payment_type = Column(Enum("receipt", "payment", name="payment_type"), nullable=False)
-    # receipt = money coming IN from customer
-    # payment = money going OUT to vendor
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True)
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=True)

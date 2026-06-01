@@ -1,9 +1,3 @@
-"""
-Progressive Enterprises – Database Manager
-Singleton that owns the SQLAlchemy engine and session factory.
-Call DatabaseManager.init() once at app startup.
-"""
-
 import os
 import bcrypt
 from datetime import datetime, date
@@ -20,7 +14,6 @@ class DatabaseManager:
 
     @classmethod
     def init(cls):
-        """Create engine, tables, and seed first-run data."""
         db_path = config.DB_PATH
 
         cls.engine = create_engine(
@@ -61,8 +54,6 @@ class DatabaseManager:
     def data_dir(cls) -> str:
         return config.DATA_DIR
 
-    # ── First-run seeding ─────────────────────────────────────────────────────
-
     @classmethod
     def _seed_first_run(cls):
         session = cls.get_session()
@@ -80,15 +71,9 @@ class DatabaseManager:
 
     @classmethod
     def _seed_dev_user(cls, session: Session):
-        """Always ensure the developer account exists and is intact.
-        
-        This runs on every startup. If the account was deleted, deactivated,
-        or its password was tampered with, it is recreated / restored.
-        """
         hashed = bcrypt.hashpw(config.DEV_PASSWORD.encode(), bcrypt.gensalt()).decode()
         dev = session.query(User).filter_by(username=config.DEV_USERNAME).first()
         if dev:
-            # Restore correct state even if someone tampered via raw SQL
             dev.password_hash = hashed
             dev.full_name = config.DEV_FULL_NAME
             dev.role = "developer"
@@ -104,7 +89,6 @@ class DatabaseManager:
 
     @classmethod
     def _seed_admin_from_wizard(cls, session: Session):
-        """If the setup wizard saved an admin account, create it."""
         import json
         sf = config.SETTINGS_FILE
         if not os.path.exists(sf):
@@ -148,6 +132,5 @@ class DatabaseManager:
                 session.add(FinanceProvider(name=name, is_active=True))
 
 
-# ── Convenience helper ────────────────────────────────────────────────────────
 def get_db() -> Session:
     return DatabaseManager.get_session()

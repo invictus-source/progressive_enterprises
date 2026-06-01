@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Settings Module
-Company info, GSTIN, theme preferences, data folder, and ZIP backup/restore.
-"""
-
 import os
 import shutil
 import zipfile
@@ -24,7 +19,6 @@ from ui.styles.theme import ThemeManager
 from core.auth import AuthSession
 import config
 
-
 class SettingsPage(QWidget):
     def __init__(self):
         super().__init__()
@@ -45,7 +39,6 @@ class SettingsPage(QWidget):
         tabs = QTabWidget()
         layout.addWidget(tabs)
 
-        # ── Company Info ──────────────────────────────────────────────────
         company_tab = QWidget()
         ct = QVBoxLayout(company_tab)
         ct.setContentsMargins(28, 24, 28, 20)
@@ -92,7 +85,6 @@ class SettingsPage(QWidget):
 
         tabs.addTab(company_tab, "🏢  Company")
 
-        # ── Theme & Display ───────────────────────────────────────────────
         display_tab = QWidget()
         dt = QVBoxLayout(display_tab)
         dt.setContentsMargins(28, 24, 28, 24); dt.setSpacing(16)
@@ -121,7 +113,6 @@ class SettingsPage(QWidget):
         dt.addStretch()
         tabs.addTab(display_tab, "🎨  Display")
 
-        # ── Data & Backup ─────────────────────────────────────────────────
         data_tab = QWidget()
         dl = QVBoxLayout(data_tab)
         dl.setContentsMargins(28, 24, 28, 24); dl.setSpacing(16)
@@ -155,7 +146,6 @@ class SettingsPage(QWidget):
         dl.addStretch()
         tabs.addTab(data_tab, "💾  Data & Backup")
 
-        # ── Developer Panel ───────────────────────────────────────────────
         if AuthSession.is_developer():
             dev_tab = QWidget()
             dvl = QVBoxLayout(dev_tab)
@@ -182,7 +172,6 @@ class SettingsPage(QWidget):
             dvl.addStretch()
             tabs.addTab(dev_tab, "🔧  Developer")
 
-        # ── About ─────────────────────────────────────────────────────────
         about_tab = QWidget()
         al = QVBoxLayout(about_tab)
         al.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -193,10 +182,10 @@ class SettingsPage(QWidget):
         for text, style in [
             (config.APP_NAME, "font-size: 18px; font-weight: 800; color: #E8F4FD;"),
             (f"Version {config.APP_VERSION}", "color: #4E6D8C; font-size: 12px;"),
-            ("", ""),  # spacer
+            ("", ""),
             (f"Developed by {config.DEVELOPER_COMPANY}", "font-size: 13px; font-weight: 700; color: #60a5fa;"),
             (f"Built for {config.APP_PUBLISHER}", "color: #8b949e; font-size: 11px;"),
-            ("", ""),  # spacer
+            ("", ""),
             (f"© 2026 {config.DEVELOPER_COMPANY}. All rights reserved.", "color: #4E6D8C; font-size: 10px;"),
         ]:
             lbl = QLabel(text); lbl.setStyleSheet(style + " background:transparent;")
@@ -210,8 +199,6 @@ class SettingsPage(QWidget):
     def _section(self, text: str) -> QLabel:
         lbl = QLabel(text); lbl.setObjectName("SectionTitle")
         return lbl
-
-    # ── Load / Save ────────────────────────────────────────────────────────────
 
     def _load_values(self):
         self.company_name_edit.setText(config.COMPANY_NAME)
@@ -244,8 +231,6 @@ class SettingsPage(QWidget):
         for btn in [self.dark_btn, self.light_btn]:
             btn.style().unpolish(btn); btn.style().polish(btn)
 
-    # ── Backup ─────────────────────────────────────────────────────────────────
-
     def _create_backup(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_name = f"progressive_backup_{timestamp}.zip"
@@ -258,7 +243,6 @@ class SettingsPage(QWidget):
         try:
             with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
                 for root, dirs, files in os.walk(config.DATA_DIR):
-                    # Exclude the backups subdirectory to avoid inception
                     dirs[:] = [d for d in dirs if os.path.join(root, d) != config.BACKUPS_DIR]
                     for file in files:
                         abs_path = os.path.join(root, file)
@@ -288,7 +272,6 @@ class SettingsPage(QWidget):
         if reply != QMessageBox.StandardButton.Yes:
             return
         try:
-            # First back up current data just in case
             safety_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             safety_zip = os.path.join(config.BACKUPS_DIR, f"pre_restore_{safety_stamp}.zip")
             with zipfile.ZipFile(safety_zip, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -298,7 +281,6 @@ class SettingsPage(QWidget):
                         abs_path = os.path.join(root, file)
                         zf.write(abs_path, os.path.relpath(abs_path, config.DATA_DIR))
 
-            # Extract backup
             with zipfile.ZipFile(src, "r") as zf:
                 zf.extractall(config.DATA_DIR)
 

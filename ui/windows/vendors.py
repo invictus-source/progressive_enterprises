@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Vendors Module
-Vendor list with search, add/edit dialog, and purchase history popup.
-"""
-
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QTextEdit, QDialog, QMessageBox,

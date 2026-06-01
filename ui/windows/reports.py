@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Reports Module
-Sales reports, profit summary, date-range filtering, Excel/PDF export.
-"""
-
 from datetime import date, datetime, timedelta
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -13,7 +8,6 @@ from PySide6.QtCore import Qt, QDate
 
 from db.manager import get_db
 from db.models import Sale, SaleItem, Product, Customer
-
 
 class ReportsPage(QWidget):
     def __init__(self):
@@ -34,7 +28,6 @@ class ReportsPage(QWidget):
         title.setObjectName("PageTitle")
         layout.addWidget(title)
 
-        # Filter bar
         filter_bar = QHBoxLayout(); filter_bar.setSpacing(10)
         self.from_date = QDateEdit(QDate.currentDate().addDays(-30))
         self.from_date.setCalendarPopup(True)
@@ -51,7 +44,6 @@ class ReportsPage(QWidget):
         filter_bar.addStretch()
         layout.addLayout(filter_bar)
 
-        # KPI row
         kpi = QHBoxLayout(); kpi.setSpacing(12)
         self.kpi_sales   = self._kpi_card("Total Sales", "₹0")
         self.kpi_txns    = self._kpi_card("Transactions", "0")
@@ -61,22 +53,18 @@ class ReportsPage(QWidget):
             kpi.addWidget(card)
         layout.addLayout(kpi)
 
-        # Tabs
         tabs = QTabWidget(); layout.addWidget(tabs)
 
-        # Sales summary tab
         st = QWidget(); sl = QVBoxLayout(st); sl.setContentsMargins(8,8,8,8)
         self.sales_table = self._make_table(["Invoice", "Date", "Customer", "Items", "Total", "GST", "Mode"])
         sl.addWidget(self.sales_table)
         tabs.addTab(st, "🧾  Sales Transactions")
 
-        # Product-wise tab
         pt = QWidget(); pl = QVBoxLayout(pt); pl.setContentsMargins(8,8,8,8)
         self.product_table = self._make_table(["Product", "Units Sold", "Revenue", "GST Collected", "Est. Profit"])
         pl.addWidget(self.product_table)
         tabs.addTab(pt, "📦  Product-wise Sales")
 
-        # Daily summary tab
         dt = QWidget(); dl = QVBoxLayout(dt); dl.setContentsMargins(8,8,8,8)
         self.daily_table = self._make_table(["Date", "Transactions", "Revenue", "GST", "Profit"])
         dl.addWidget(self.daily_table)
@@ -123,7 +111,6 @@ class ReportsPage(QWidget):
             total_rev = sum(s.grand_total for s in sales)
             total_gst = sum(s.total_gst for s in sales)
 
-            # Estimate profit (selling - purchase cost of items)
             est_profit = 0.0
             product_summary: dict[int, dict] = {}
             for s in sales:
@@ -150,7 +137,6 @@ class ReportsPage(QWidget):
             self.kpi_profit._val_lbl.setText(f"₹{est_profit:,.0f}")
             self.kpi_avg._val_lbl.setText(f"₹{avg_order:,.0f}")
 
-            # Sales table
             self.sales_table.setRowCount(len(sales))
             for r, s in enumerate(sales):
                 for c, v in enumerate([
@@ -164,7 +150,6 @@ class ReportsPage(QWidget):
                 ]):
                     self.sales_table.setItem(r, c, QTableWidgetItem(v))
 
-            # Product table
             sorted_prods = sorted(product_summary.values(), key=lambda x: x["revenue"], reverse=True)
             self.product_table.setRowCount(len(sorted_prods))
             for r, p in enumerate(sorted_prods):
@@ -174,7 +159,6 @@ class ReportsPage(QWidget):
                 ]):
                     self.product_table.setItem(r, c, QTableWidgetItem(v))
 
-            # Daily summary
             daily: dict[str, dict] = {}
             for s in sales:
                 d = s.sale_date.strftime("%d %b %Y")

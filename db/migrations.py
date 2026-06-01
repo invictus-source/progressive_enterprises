@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Automated SQLite MigrationSystem
-Detects schema differences and auto-migrates the database.
-"""
-
 import sqlite3
 from typing import Dict, List, Tuple, Set
 from sqlalchemy import inspect, text
@@ -11,11 +6,6 @@ from db.models import Base
 
 
 class MigrationSystem:
-    """
-    Automated migration system for SQLite.
-    Compares SQLAlchemy models with actual database schema
-    and performs necessary migrations.
-    """
     
     def __init__(self, engine, session: Session = None):
         self.engine = engine
@@ -23,18 +13,15 @@ class MigrationSystem:
         self.inspector = inspect(engine)
         
     def get_db_tables(self) -> Set[str]:
-        """Get all table names from the actual database."""
         try:
             return set(self.inspector.get_table_names())
         except Exception:
             return set()
     
     def get_model_tables(self) -> Set[str]:
-        """Get all table names from SQLAlchemy models."""
         return set(Base.metadata.tables.keys())
     
     def get_db_columns(self, table_name: str) -> Dict[str, dict]:
-        """Get column info from actual database for a table."""
         try:
             columns = {}
             for col in self.inspector.get_columns(table_name):
@@ -49,7 +36,6 @@ class MigrationSystem:
             return {}
     
     def get_model_columns(self, table_name: str) -> Dict[str, dict]:
-        """Get column info from SQLAlchemy model for a table."""
         columns = {}
         if table_name not in Base.metadata.tables:
             return columns
@@ -65,7 +51,6 @@ class MigrationSystem:
         return columns
     
     def sqlite_type_to_sqlalchemy(self, sqlite_type: str) -> str:
-        """Map SQLite types to SQLAlchemy type strings for comparison."""
         sqlite_type = sqlite_type.upper()
         
         type_mappings = {
@@ -99,7 +84,6 @@ class MigrationSystem:
         return sqlite_type
     
     def types_compatible(self, db_type: str, model_type: str) -> bool:
-        """Check if database type is compatible with model type."""
         db_type_upper = db_type.upper()
         model_type_upper = model_type.upper()
         
@@ -121,13 +105,6 @@ class MigrationSystem:
         return False
     
     def detect_changes(self) -> Dict:
-        """
-        Detect all schema changes needed.
-        Returns dict with:
-        - new_tables: tables to create
-        - new_columns: columns to add per table
-        - modified_columns: columns that need attention (log warnings)
-        """
         changes = {
             'new_tables': [],
             'new_columns': {},
@@ -170,10 +147,6 @@ class MigrationSystem:
         return changes
     
     def apply_migrations(self, verbose: bool = True) -> Tuple[bool, List[str]]:
-        """
-        Apply all detected migrations.
-        Returns (success, messages).
-        """
         messages = []
         
         try:
@@ -216,7 +189,6 @@ class MigrationSystem:
             return False, [error_msg]
     
     def _create_table(self, table_name: str):
-        """Create a table from the SQLAlchemy model."""
         if table_name not in Base.metadata.tables:
             return
         
@@ -230,7 +202,6 @@ class MigrationSystem:
             conn.close()
     
     def _add_column(self, table_name: str, column_name: str, column_info: dict):
-        """Add a new column to an existing table."""
         conn = self.engine.connect()
         try:
             sql_type = self._get_sql_type(column_info)
@@ -244,7 +215,6 @@ class MigrationSystem:
             conn.close()
     
     def _get_sql_type(self, column_info: dict) -> str:
-        """Convert SQLAlchemy type to SQLite type."""
         type_str = column_info['type'].upper()
         
         if 'VARCHAR' in type_str or 'CHAR' in type_str:
@@ -263,7 +233,6 @@ class MigrationSystem:
             return 'TEXT'
     
     def get_migration_report(self) -> str:
-        """Generate a human-readable migration report."""
         changes = self.detect_changes()
         lines = ["=" * 50, "Database Migration Report", "=" * 50, ""]
         
@@ -307,9 +276,5 @@ class MigrationSystem:
 
 
 def run_migrations(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
-    """
-    Convenience function to run migrations.
-    Call this after DatabaseManager.init() but before seeding.
-    """
     migrator = MigrationSystem(engine)
     return migrator.apply_migrations(verbose=verbose)

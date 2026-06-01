@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Premium Sidebar
-Uses qtawesome icons for professional nav items with section grouping.
-"""
-
 import os
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -28,30 +23,23 @@ def _icon(name: str, color: str = "#94A3B8", size: int = 18):
     return None
 
 
-# Navigation definition: (section, display_name, icon_name, page_key)
 NAV_ITEMS = [
-    # Section: Main
     ("MAIN",        None,                None,                          None),
     (None,          "Dashboard",         "mdi.view-dashboard-outline",  "dashboard"),
-    # Section: Sales
     ("SALES",       None,                None,                          None),
     (None,          "Point of Sale",     "mdi.cart-outline",            "pos"),
     (None,          "Sales History",     "mdi.receipt",                 "sales_history"),
     (None,          "Customers",         "mdi.account-group-outline",   "customers"),
-    # Section: Inventory
     ("INVENTORY",   None,                None,                          None),
     (None,          "Inventory",         "mdi.package-variant-closed",  "inventory"),
     (None,          "Purchases / GRN",   "mdi.truck-delivery-outline",  "purchases"),
     (None,          "Vendors",           "mdi.store-outline",           "vendors"),
-    # Section: Finance
     ("FINANCE",     None,                None,                          None),
     (None,          "EMI & Finance",     "mdi.credit-card-outline",     "emi_finance"),
     (None,          "Payments",          "mdi.cash-multiple",           "payments"),
     (None,          "GST Reports",       "mdi.file-chart-outline",      "gst_reports"),
-    # Section: Analytics
     ("ANALYTICS",   None,                None,                          None),
     (None,          "Reports",           "mdi.chart-bar",               "reports"),
-    # Section: Admin
     ("ADMIN",       None,                None,                          None),
     (None,          "Users",             "mdi.account-key-outline",     "user_mgmt"),
     (None,          "Settings",          "mdi.cog-outline",             "settings"),
@@ -109,7 +97,6 @@ class Sidebar(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Brand block ────────────────────────────────────────────────────
         self.brand = QWidget()
         self.brand.setObjectName("BrandBlock")
         self.brand.setMinimumHeight(60)
@@ -144,7 +131,6 @@ class Sidebar(QWidget):
         bl.addLayout(logo_name_row)
         root.addWidget(self.brand)
 
-        # ── Scrollable nav list ────────────────────────────────────────────
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -187,7 +173,6 @@ class Sidebar(QWidget):
         scroll.setWidget(nav_container)
         root.addWidget(scroll, 1)
 
-        # ── User info block ────────────────────────────────────────────────
         self.user_block = QWidget()
         self.user_block.setObjectName("UserBlock")
         self.user_block.setMinimumHeight(50)
@@ -195,7 +180,6 @@ class Sidebar(QWidget):
         ub.setContentsMargins(14, 10, 14, 10)
         ub.setSpacing(10)
 
-        # Avatar circle with initials
         self.avatar_lbl = QLabel("?")
         self.avatar_lbl.setObjectName("UserAvatar")
         self.avatar_lbl.setFixedSize(36, 36)
@@ -213,7 +197,6 @@ class Sidebar(QWidget):
         ub.addLayout(user_info)
         ub.addStretch()
 
-        # Logout button
         logout_btn = QPushButton()
         logout_btn.setObjectName("IconBtn")
         logout_btn.setFixedSize(32, 32)
@@ -227,7 +210,6 @@ class Sidebar(QWidget):
 
         root.addWidget(self.user_block)
 
-        # ── Developer credit ──────────────────────────────────────────────
         self.dev_credit = QLabel(f"⚡ {config.DEVELOPER_COMPANY}")
         self.dev_credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.dev_credit.setStyleSheet(
@@ -250,7 +232,6 @@ class Sidebar(QWidget):
             btn.setProperty("active", active)
             btn.style().unpolish(btn)
             btn.style().polish(btn)
-            # Update icon color
             if HAS_QTA:
                 icon_name = next(
                     (i for sec, n, i, p in NAV_ITEMS if p == k), None)
@@ -283,11 +264,9 @@ class Sidebar(QWidget):
             self.window().close()
 
     def _on_theme_change(self):
-        # Re-polish icon colors
         accent = ThemeManager.t("accent")
         self._set_active(self._active_key)
 
 
     def get_selected_original_index(self):
-        """Compat shim – not used on sidebar."""
         return None

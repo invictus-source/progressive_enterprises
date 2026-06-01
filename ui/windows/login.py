@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Premium Login Window
-Frameless, fullscreen-capable, animated login with theme support.
-"""
-
 import os
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -32,7 +27,6 @@ class LoginWindow(QDialog):
         self._drag_pos = None
         self._is_maximized = config.load_prefs().get("login_maximized", True)
 
-        # No system frame – we draw our own
         self.setWindowFlags(
             Qt.WindowType.Window |
             Qt.WindowType.FramelessWindowHint |
@@ -42,18 +36,15 @@ class LoginWindow(QDialog):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
-        self.field_labels = [] # To track labels for theme updates
+        self.field_labels = []
 
         self._build_ui()
         self._apply_theme()
 
-        # Register to listen for live theme changes
         ThemeManager.register_callback(self._apply_theme)
 
-        # Keyboard shortcuts
         QShortcut(QKeySequence("F11"), self).activated.connect(self._toggle_fullscreen)
 
-        # Always open maximized so it never appears as a tiny window
         if self._is_maximized:
             QTimer.singleShot(0, self.showMaximized)
         else:
@@ -71,7 +62,6 @@ class LoginWindow(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Custom title bar ───────────────────────────────────────────────
         self.title_bar = QWidget()
         self.title_bar.setFixedHeight(40)
         self.title_bar.mousePressEvent   = self._tb_press
@@ -85,14 +75,12 @@ class LoginWindow(QDialog):
         tb.addWidget(self.title_lbl)
         tb.addStretch()
 
-        # Theme toggle
         self.theme_btn = QPushButton()
         self.theme_btn.setFixedSize(32, 32)
         self.theme_btn.setToolTip("Toggle Light/Dark Theme")
         self.theme_btn.clicked.connect(ThemeManager.toggle)
         tb.addWidget(self.theme_btn)
 
-        # Maximize toggle
         self.fs_btn = QPushButton()
         self.fs_btn.setFixedSize(32, 32)
         self.fs_btn.setToolTip("Toggle Maximize (F11)")
@@ -100,7 +88,6 @@ class LoginWindow(QDialog):
         self.fs_btn.clicked.connect(self._toggle_fullscreen)
         tb.addWidget(self.fs_btn)
 
-        # Min / Close
         self.min_btn = QPushButton()
         self.min_btn.setFixedSize(32, 32)
         if not HAS_QTA: self.min_btn.setText("—")
@@ -115,20 +102,17 @@ class LoginWindow(QDialog):
 
         root.addWidget(self.title_bar)
 
-        # ── Login Card ─────────────────────────────────────────────────────
         self.outer = QWidget()
         outer_layout = QVBoxLayout(self.outer)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # SAVED AS SELF SO WE CAN STYLE IT IN _apply_theme
         self.card = QFrame()
         self.card.setFixedWidth(400)
         card_layout = QVBoxLayout(self.card)
         card_layout.setContentsMargins(40, 36, 40, 36)
         card_layout.setSpacing(18)
 
-        # Logo / Brand
         brand_row = QHBoxLayout()
         brand_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_lbl = QLabel()
@@ -152,16 +136,13 @@ class LoginWindow(QDialog):
         self.version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(self.version_lbl)
 
-        # Divider
         self.div = QFrame()
         self.div.setFrameShape(QFrame.Shape.HLine)
         card_layout.addWidget(self.div)
 
-        # Sign in label
         self.sign_in = QLabel("Sign In")
         card_layout.addWidget(self.sign_in)
 
-        # Username field
         user_lbl = QLabel("USERNAME")
         self.field_labels.append(user_lbl)
         card_layout.addWidget(user_lbl)
@@ -175,7 +156,6 @@ class LoginWindow(QDialog):
             )
         card_layout.addWidget(self.username_input)
 
-        # Password field
         pwd_lbl = QLabel("PASSWORD")
         self.field_labels.append(pwd_lbl)
         card_layout.addWidget(pwd_lbl)
@@ -201,19 +181,16 @@ class LoginWindow(QDialog):
         pwd_row.addWidget(self.show_pwd_btn)
         card_layout.addLayout(pwd_row)
 
-        # Error label
         self.error_lbl = QLabel("")
         self.error_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.error_lbl.setWordWrap(True)
         card_layout.addWidget(self.error_lbl)
 
-        # Login button
         self.login_btn = QPushButton("Sign In")
         self.login_btn.setFixedHeight(44)
         self.login_btn.clicked.connect(self._do_login)
         card_layout.addWidget(self.login_btn)
 
-        # Footer
         self.footer_lbl = QLabel(f"© 2026 {config.APP_NAME}  •  v{config.APP_VERSION}\nDeveloped by {config.DEVELOPER_COMPANY}")
         self.footer_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.footer_lbl.setWordWrap(True)
@@ -226,7 +203,6 @@ class LoginWindow(QDialog):
         T = ThemeManager.tokens()
         dk = ThemeManager.is_dark()
 
-        # 1. Base Layouts (Background and Card)
         self.setStyleSheet(f"QDialog {{ background-color: {T['bg_base']}; }}")
         self.outer.setStyleSheet(f"background-color: {T['bg_base']};")
 
@@ -238,7 +214,6 @@ class LoginWindow(QDialog):
             }}
         """)
 
-        # 2. Text Elements (Guaranteed Visibility)
         self.title_lbl.setStyleSheet(f"color: {T['text_muted']}; font-weight: 700; font-size: 12px; border: none; background: transparent;")
         self.app_name.setStyleSheet(f"color: {T['text_primary']}; font-weight: 800; font-size: 18px; border: none; background: transparent;")
         self.version_lbl.setStyleSheet(f"color: {T['text_muted']}; font-size: 11px; border: none; background: transparent;")
@@ -250,7 +225,6 @@ class LoginWindow(QDialog):
         for lbl in self.field_labels:
             lbl.setStyleSheet(f"color: {T['text_secondary']}; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; border: none; background: transparent;")
 
-        # 3. Inputs
         input_style = f"""
             QLineEdit {{
                 background-color: {T['bg_input']};
@@ -267,7 +241,6 @@ class LoginWindow(QDialog):
         self.username_input.setStyleSheet(input_style)
         self.password_input.setStyleSheet(input_style)
 
-        # 4. Buttons (Bulletproof Explicit Styling)
         btn_style = f"""
             QPushButton {{
                 background-color: {T['accent']};
@@ -314,7 +287,6 @@ class LoginWindow(QDialog):
             QPushButton:hover {{ background-color: {T['danger']}; color: #FFFFFF; }}
         """)
 
-        # 5. Icons
         if HAS_QTA:
             icon_color = T['text_muted']
             self.theme_btn.setIcon(qta.icon("mdi.weather-sunny" if dk else "mdi.weather-night", color=icon_color))
@@ -369,8 +341,6 @@ class LoginWindow(QDialog):
             self.error_lbl.setText(f"❌  {msg}")
             self.password_input.clear()
             self.password_input.setFocus()
-
-    # ── Drag support (frameless window) ───────────────────────────────────
 
     def _tb_press(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

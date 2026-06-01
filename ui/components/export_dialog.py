@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Export Viewer Dialog
-Provides clear context about a generated export (PDF/Excel) and options to open/print/explore.
-"""
-
 import os
 import subprocess
 from PySide6.QtWidgets import (
@@ -32,7 +27,6 @@ class ExportReadyDialog(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Header
         header = QWidget()
         header.setObjectName("DialogHeader")
         hl = QVBoxLayout(header)
@@ -47,7 +41,6 @@ class ExportReadyDialog(QDialog):
         hl.addWidget(sub)
         root.addWidget(header)
 
-        # Body
         body = QWidget()
         body.setObjectName("DialogBody")
         bl = QVBoxLayout(body)
@@ -58,7 +51,6 @@ class ExportReadyDialog(QDialog):
         msg.setStyleSheet("color: #64748B; font-size: 13px; font-weight: 500;")
         bl.addWidget(msg)
 
-        # File Box
         file_box = QFrame()
         file_box.setObjectName("Card")
         file_box.setStyleSheet(file_box.styleSheet() + "background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);")
@@ -78,14 +70,12 @@ class ExportReadyDialog(QDialog):
         bl.addWidget(file_box)
         root.addWidget(body, 1)
 
-        # Footer (Actions)
         footer = QWidget()
         footer.setObjectName("DialogFooter")
         fl = QHBoxLayout(footer)
         fl.setContentsMargins(20, 16, 20, 16)
         fl.setSpacing(12)
 
-        # Folder Button
         folder_btn = QPushButton("Show in Folder")
         folder_btn.setObjectName("GhostBtn")
         folder_btn.setFixedHeight(38)
@@ -96,17 +86,15 @@ class ExportReadyDialog(QDialog):
 
         fl.addStretch()
 
-        # Print Button
         print_btn = QPushButton("Print")
         print_btn.setObjectName("PrimaryBtn")
-        print_btn.setStyleSheet("background: #0284C7;") # Unique blue variant
+        print_btn.setStyleSheet("background: #0284C7;")
         print_btn.setFixedHeight(38)
         if HAS_QTA:
             print_btn.setIcon(qta.icon("mdi.printer", color="white"))
         print_btn.clicked.connect(self._print_document)
         fl.addWidget(print_btn)
 
-        # Open Button
         open_btn = QPushButton("Open File")
         open_btn.setObjectName("SuccessBtn")
         open_btn.setFixedHeight(38)

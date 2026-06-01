@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Toast Notification Component
-Inline notifications that don't create new windows.
-"""
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QGraphicsOpacityEffect
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Property, QPoint
 from PySide6.QtGui import QColor

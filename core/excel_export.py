@@ -1,7 +1,3 @@
-"""
-Progressive Enterprises – Excel Export Utilities
-"""
-
 import os
 from datetime import datetime, date
 from openpyxl import Workbook
@@ -14,8 +10,6 @@ import config
 from db.manager import get_db
 from db.models import Sale, Purchase
 
-
-# ── Style helpers ─────────────────────────────────────────────────────────────
 
 HEADER_FILL = PatternFill("solid", fgColor="1E3A5F")
 SUBHEADER_FILL = PatternFill("solid", fgColor="2563EB")
@@ -68,8 +62,6 @@ def _out_path(name: str) -> str:
     return path
 
 
-# ── Sales Report ──────────────────────────────────────────────────────────────
-
 def export_sales_report(from_date: date, to_date: date) -> str:
     session = get_db()
     try:
@@ -83,7 +75,6 @@ def export_sales_report(from_date: date, to_date: date) -> str:
         ws = wb.active
         ws.title = "Sales Report"
 
-        # Title
         ws.merge_cells("A1:H1")
         title_cell = ws["A1"]
         title_cell.value = f"{config.COMPANY_NAME} – Sales Report ({from_date} to {to_date})"
@@ -110,7 +101,6 @@ def export_sales_report(from_date: date, to_date: date) -> str:
             _data_cell(ws, r, 8, sale.grand_total, alt, number_format='₹#,##0.00')
             total_grand += sale.grand_total
 
-        # Totals row
         tr = len(sales) + 3
         tc = ws.cell(row=tr, column=1, value="TOTAL")
         tc.font = Font(bold=True, size=10, color="1E3A5F")
@@ -130,8 +120,6 @@ def export_sales_report(from_date: date, to_date: date) -> str:
         session.close()
 
 
-# ── GST Report ────────────────────────────────────────────────────────────────
-
 def export_gst_report(month: int, year: int) -> str:
     session = get_db()
     try:
@@ -149,7 +137,6 @@ def export_gst_report(month: int, year: int) -> str:
 
         wb = Workbook()
 
-        # Sheet 1 – Outward
         ws1 = wb.active
         ws1.title = "Outward Supplies"
         ws1.merge_cells("A1:H1")
@@ -170,7 +157,6 @@ def export_gst_report(month: int, year: int) -> str:
             ], 1):
                 _data_cell(ws1, r, c, v)
 
-        # Sheet 2 – Inward
         ws2 = wb.create_sheet("Inward Supplies")
         ws2.merge_cells("A1:H1")
         ws2["A1"].value = f"Inward Supplies (Purchases) – {period}"

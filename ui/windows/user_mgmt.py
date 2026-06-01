@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – User Management Module
-Create, edit, activate/deactivate users. Restricted to Admin and Developer roles.
-"""
-
 import bcrypt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -15,7 +10,6 @@ from ui.components.form_dialog import FormDialog, ValidationError
 from db.manager import get_db
 from db.models import User
 from core.auth import AuthSession
-
 
 class AddEditUserDialog(FormDialog):
     def __init__(self, user: User = None, parent=None):
@@ -40,7 +34,6 @@ class AddEditUserDialog(FormDialog):
         self.add_field("Password", self.password_edit, hint=hint)
 
         self.role_combo = QComboBox()
-        # Developer can only be set by dev; others see admin/staff
         current = AuthSession.current_user()
         if current and current.role == "developer":
             self.role_combo.addItems(["staff", "admin", "developer"])
@@ -55,7 +48,7 @@ class AddEditUserDialog(FormDialog):
     def _populate(self, u: User):
         self.full_name_edit.setText(u.full_name or "")
         self.username_edit.setText(u.username or "")
-        self.username_edit.setReadOnly(True)  # Can't rename
+        self.username_edit.setReadOnly(True)
         idx = self.role_combo.findText(u.role)
         if idx >= 0: self.role_combo.setCurrentIndex(idx)
         self.active_check.setChecked(u.is_active)
@@ -81,7 +74,6 @@ class AddEditUserDialog(FormDialog):
             data["password_hash"] = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         return data
 
-
 class UserMgmtPage(QWidget):
     def __init__(self):
         super().__init__()
@@ -102,7 +94,6 @@ class UserMgmtPage(QWidget):
         title.setObjectName("PageTitle")
         layout.addWidget(title)
 
-        # Check permission
         if not AuthSession.is_admin_or_above():
             lbl = QLabel("🔒  You do not have permission to access this page.")
             lbl.setStyleSheet("color: #f87171; font-size: 16px;")
@@ -163,7 +154,6 @@ class UserMgmtPage(QWidget):
             QMessageBox.information(self, "Select User", "Please select a user.")
             return
         user = self._users[orig]
-        # Protect dev account from non-dev users
         if user.role == "developer" and not AuthSession.is_developer():
             QMessageBox.warning(self, "Permission Denied", "Cannot edit developer account.")
             return
@@ -174,7 +164,7 @@ class UserMgmtPage(QWidget):
             if dlg.exec() == QDialog.DialogCode.Accepted:
                 data = dlg.get_data()
                 for k, v in data.items():
-                    if k != "username":  # username is readonly in edit mode
+                    if k != "username":
                         setattr(u, k, v)
                 session.commit()
                 self.refresh()

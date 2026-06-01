@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Reusable Data Table Widget
-Sortable, filterable QTableWidget with alternating rows.
-"""
-
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget,
     QTableWidgetItem, QHeaderView, QLabel, QLineEdit, QPushButton
@@ -12,22 +7,8 @@ from PySide6.QtGui import QFont
 
 
 class DataTable(QWidget):
-    """
-    A polished table widget with an optional search bar and action buttons.
-    
-    Usage:
-        table = DataTable(
-            columns=["Name", "Phone", "City"],
-            searchable=True,
-            actions=[("➕ Add", self.on_add), ("🗑 Delete", self.on_delete)],
-        )
-        table.set_data([
-            ["John Doe", "9876543210", "Jaipur"],
-            ...
-        ])
-    """
 
-    row_clicked = Signal(int)       # emits the original data-row index
+    row_clicked = Signal(int)
     row_double_clicked = Signal(int)
 
     def __init__(
@@ -50,7 +31,6 @@ class DataTable(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        # Top bar: search + action buttons
         top_bar = QHBoxLayout()
         top_bar.setSpacing(8)
 
@@ -74,7 +54,6 @@ class DataTable(QWidget):
         if top_bar.count() > 0:
             layout.addLayout(top_bar)
 
-        # Table
         self._table = QTableWidget()
         self._table.setColumnCount(len(self._columns))
         self._table.setHorizontalHeaderLabels(self._columns)
@@ -90,15 +69,11 @@ class DataTable(QWidget):
 
         layout.addWidget(self._table)
 
-        # Row count label
         self._count_label = QLabel("0 records")
         self._count_label.setStyleSheet("color: #6e7681; font-size: 11px;")
         layout.addWidget(self._count_label)
 
-    # ── Public API ────────────────────────────────────────────────────────────
-
     def set_data(self, data: list[list], resize_columns: bool = True):
-        """Load a 2D list into the table (one sublist per row)."""
         self._all_data = data
         self._apply_filter(getattr(self, '_search', None) and self._search.text() or "")
         if resize_columns:
@@ -108,7 +83,6 @@ class DataTable(QWidget):
             header.setSectionResizeMode(len(self._columns) - 1, QHeaderView.ResizeMode.Stretch)
 
     def get_selected_original_index(self) -> int | None:
-        """Returns the data-index (into _all_data) of the selected row, or None."""
         rows = self._table.selectedItems()
         if not rows:
             return None
@@ -131,8 +105,6 @@ class DataTable(QWidget):
 
     def hide_column(self, col: int):
         self._table.setColumnHidden(col, True)
-
-    # ── Internal ──────────────────────────────────────────────────────────────
 
     def _apply_filter(self, text: str = ""):
         text = text.lower().strip()

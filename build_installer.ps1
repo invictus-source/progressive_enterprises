@@ -5,12 +5,9 @@ Write-Host " Building Progressive Enterprises Windows Installer"
 Write-Host "======================================================="
 
 Write-Host "`n[1/4] Bundling application with PyInstaller (via spec)..."
-# Use the spec file -- it handles all Qt plugin paths automatically
 .venv\Scripts\pyinstaller --noconfirm "Progressive Enterprises.spec"
 
 Write-Host "`n[2/4] Writing qt.conf next to the .exe..."
-# PyInstaller onedir layout: exe is at dist\<name>\, internals in _internal\
-# qt.conf must sit NEXT TO the .exe and point into _internal\PySide6\plugins
 $qtConfContent = @"
 [Paths]
 Plugins = ./_internal/PySide6/plugins
@@ -18,7 +15,6 @@ Plugins = ./_internal/PySide6/plugins
 $qtConfContent | Out-File -FilePath "dist\Progressive Enterprises\qt.conf" -Encoding ascii -NoNewline
 Write-Host "   qt.conf written to dist\Progressive Enterprises\qt.conf"
 
-# Verify critical plugin DLLs are present
 Write-Host "`n   Verifying plugin presence..."
 $stylesPath  = "dist\Progressive Enterprises\_internal\PySide6\plugins\styles"
 $platformPath = "dist\Progressive Enterprises\_internal\PySide6\plugins\platforms"

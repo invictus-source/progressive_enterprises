@@ -1,7 +1,3 @@
-"""
-Progressive Enterprises – GST Reports Module
-"""
-
 from datetime import date
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -13,10 +9,8 @@ from PySide6.QtCore import Qt
 from db.manager import get_db
 from db.models import Sale, SaleItem, Purchase, PurchaseItem
 
-
 _MONTHS = ["January","February","March","April","May","June",
            "July","August","September","October","November","December"]
-
 
 class GSTReportsPage(QWidget):
     def __init__(self):
@@ -37,7 +31,6 @@ class GSTReportsPage(QWidget):
         title.setObjectName("PageTitle")
         layout.addWidget(title)
 
-        # Filter bar
         filter_bar = QHBoxLayout()
         self.month_combo = QComboBox()
         self.month_combo.addItems(_MONTHS)
@@ -62,14 +55,12 @@ class GSTReportsPage(QWidget):
         tabs = QTabWidget()
         layout.addWidget(tabs)
 
-        # Outward (Sales) tab
         out_tab = QWidget()
         ol = QVBoxLayout(out_tab); ol.setContentsMargins(8, 8, 8, 8)
         self.out_table = self._make_table(["Invoice", "Date", "Customer", "Taxable", "CGST", "SGST", "Total GST", "Grand Total"])
         ol.addWidget(self.out_table)
         tabs.addTab(out_tab, "📤  Outward Supplies (Sales)")
 
-        # Inward (Purchases) tab
         in_tab = QWidget()
         il = QVBoxLayout(in_tab); il.setContentsMargins(8, 8, 8, 8)
         self.in_table = self._make_table(["GRN No.", "Date", "Vendor", "Taxable", "CGST", "SGST", "Total GST", "Grand Total"])
@@ -102,7 +93,6 @@ class GSTReportsPage(QWidget):
 
         session = get_db()
         try:
-            # Outward
             sales = session.query(Sale).filter(
                 Sale.sale_date >= start, Sale.sale_date < end,
                 Sale.is_cancelled == False
@@ -123,7 +113,6 @@ class GSTReportsPage(QWidget):
                     self.out_table.setItem(r, c, QTableWidgetItem(v))
                 tot_taxable += s.taxable_amount; tot_cgst += s.cgst_amount
                 tot_sgst += s.sgst_amount; tot_grand += s.grand_total
-            # Totals row
             for c, v in enumerate(["TOTAL", "", "", f"₹{tot_taxable:,.2f}",
                                     f"₹{tot_cgst:,.2f}", f"₹{tot_sgst:,.2f}",
                                     f"₹{(tot_cgst+tot_sgst):,.2f}", f"₹{tot_grand:,.2f}"]):
@@ -131,7 +120,6 @@ class GSTReportsPage(QWidget):
                 item.setForeground(__import__("PySide6.QtGui", fromlist=["QColor"]).QColor("#60a5fa"))
                 self.out_table.setItem(len(sales), c, item)
 
-            # Inward
             purchases = session.query(Purchase).filter(
                 Purchase.purchase_date >= start, Purchase.purchase_date < end
             ).order_by(Purchase.purchase_date).all()

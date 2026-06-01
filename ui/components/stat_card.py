@@ -1,20 +1,9 @@
-"""
-Progressive Enterprises – KPI Stat Card Widget
-"""
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QSizePolicy
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 
 class StatCard(QWidget):
-    """
-    A KPI card displaying an icon, a large value, and a label.
-    
-    Usage:
-        card = StatCard("💰", "Today's Revenue", "₹0", accent="#2563eb")
-        card.update_value("₹12,450")
-    """
 
     def __init__(self, icon: str, label: str, value: str = "—",
                  accent: str = "#2563eb", parent=None):
@@ -29,7 +18,6 @@ class StatCard(QWidget):
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(4)
 
-        # Top row: icon + accent bar
         top = QHBoxLayout()
         icon_lbl = QLabel(icon)
         icon_lbl.setStyleSheet(
@@ -43,7 +31,6 @@ class StatCard(QWidget):
         top.addWidget(accent_dot)
         layout.addLayout(top)
 
-        # Value
         self._value_lbl = QLabel(value)
         self._value_lbl.setObjectName("StatValue")
         self._value_lbl.setWordWrap(True)
@@ -52,7 +39,6 @@ class StatCard(QWidget):
         )
         layout.addWidget(self._value_lbl)
 
-        # Label
         lbl = QLabel(label.upper())
         lbl.setObjectName("StatLabel")
         lbl.setWordWrap(True)

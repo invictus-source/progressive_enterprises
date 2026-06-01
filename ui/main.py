@@ -1,9 +1,3 @@
-"""
-Progressive Enterprises – Main Application Window
-Sidebar + stacked-widget layout. Supports Ctrl+/- zoom, theme toggle, window controls.
-Responsive design for various screen sizes.
-"""
-
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
     QLabel, QStatusBar, QFrame, QPushButton, QApplication, QSizePolicy,
@@ -36,7 +30,6 @@ class MainWindow(QMainWindow):
         ThemeManager.load_from_prefs()
         ThemeManager.apply_to_app()
 
-        # Restore font size
         saved_scale = prefs.get("font_scale", 10)
         font = QApplication.font()
         font.setPointSize(int(saved_scale) if isinstance(saved_scale, (int, float)) else 10)
@@ -57,16 +50,12 @@ class MainWindow(QMainWindow):
         screen = QApplication.primaryScreen()
         if screen:
             available = screen.availableGeometry()
-            # Use 80% of screen as minimum so it always fills most of the display.
-            # Hard floor at 800x500 for very small/embedded screens.
             self._min_width  = max(800, int(available.width()  * 0.80))
             self._min_height = max(500, int(available.height() * 0.80))
         else:
             self._min_width  = 1024
             self._min_height = 600
         self.setMinimumSize(self._min_width, self._min_height)
-
-    # ── UI Construction ────────────────────────────────────────────────────────
 
     def _setup_ui(self):
         central = QWidget()
@@ -76,17 +65,14 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Sidebar
         self.sidebar = Sidebar()
         self.sidebar.page_requested.connect(self._navigate)
         root.addWidget(self.sidebar)
 
-        # Main content (topbar + stack)
         content_area = QVBoxLayout()
         content_area.setContentsMargins(0, 0, 0, 0)
         content_area.setSpacing(0)
 
-        # Top Bar
         self.top_bar = QWidget()
         self.top_bar.setObjectName("TopBar")
         self.top_bar.setMinimumHeight(42)
@@ -96,7 +82,6 @@ class MainWindow(QMainWindow):
 
         tb.addStretch()
 
-        # Zoom out
         zoom_out = QPushButton()
         zoom_out.setObjectName("IconBtn")
         zoom_out.setFixedSize(32, 32)
@@ -108,7 +93,6 @@ class MainWindow(QMainWindow):
             zoom_out.setText("—")
         tb.addWidget(zoom_out)
 
-        # Zoom in
         zoom_in = QPushButton()
         zoom_in.setObjectName("IconBtn")
         zoom_in.setFixedSize(32, 32)
@@ -120,7 +104,6 @@ class MainWindow(QMainWindow):
             zoom_in.setText("+")
         tb.addWidget(zoom_in)
 
-        # Theme toggle
         self.theme_btn = QPushButton()
         self.theme_btn.setObjectName("IconBtn")
         self.theme_btn.setFixedSize(32, 32)
@@ -129,7 +112,6 @@ class MainWindow(QMainWindow):
         self._update_theme_btn()
         tb.addWidget(self.theme_btn)
 
-        # Menu toggle for small screens
         self.menu_toggle = QPushButton()
         self.menu_toggle.setObjectName("IconBtn")
         self.menu_toggle.setFixedSize(32, 32)
@@ -142,12 +124,10 @@ class MainWindow(QMainWindow):
         self.menu_toggle.hide()
         tb.insertWidget(0, self.menu_toggle)
         
-        # Responsive handling
         self._update_responsive_layout()
         
         content_area.addWidget(self.top_bar)
 
-        # Content stack with toast container
         self.stack_container = QWidget()
         stack_layout = QVBoxLayout(self.stack_container)
         stack_layout.setContentsMargins(0, 0, 0, 0)
@@ -157,7 +137,6 @@ class MainWindow(QMainWindow):
         self.stack.setObjectName("ContentArea")
         stack_layout.addWidget(self.stack, 1)
         
-        # Toast container overlay
         self.toast_container = QWidget()
         self.toast_container.setStyleSheet("background: transparent;")
         toast_layout = QVBoxLayout(self.toast_container)
@@ -174,7 +153,6 @@ class MainWindow(QMainWindow):
         root.addWidget(content_widget, 1)
 
     def _register_pages(self):
-        """Lazy-import pages and add them to the stack."""
         from ui.windows.dashboard     import DashboardPage
         from ui.windows.pos           import POSPage
         from ui.windows.sales_history import SalesHistoryPage
@@ -231,8 +209,6 @@ class MainWindow(QMainWindow):
         for w_ in [icon, msg]: vl.addWidget(w_)
         return w
 
-    # ── Navigation ─────────────────────────────────────────────────────────────
-
     def _navigate(self, key: str):
         page = self._pages.get(key)
         if page is None:
@@ -240,11 +216,6 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(page)
         self.sidebar.set_page(key)
 
-        # Update top-bar title
-
-
-
-        # Refresh page
         if hasattr(page, "refresh") and page != self._pages.get("_refreshed_" + key):
             try:
                 page.refresh()
@@ -289,8 +260,6 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         self._update_responsive_layout()
 
-    # ── Keyboard Shortcuts ─────────────────────────────────────────────────────
-
     def _setup_shortcuts(self):
         QShortcut(QKeySequence("Ctrl++"),  self).activated.connect(self._zoom_in)
         QShortcut(QKeySequence("Ctrl+="),  self).activated.connect(self._zoom_in)
@@ -322,8 +291,6 @@ class MainWindow(QMainWindow):
         else:
             self.showFullScreen()
 
-    # ── Theme ──────────────────────────────────────────────────────────────────
-
     def _on_theme_change(self):
         self._update_theme_btn()
 
@@ -333,8 +300,6 @@ class MainWindow(QMainWindow):
             return
         icon_name = "mdi.weather-sunny" if ThemeManager.is_dark() else "mdi.weather-night"
         self.theme_btn.setIcon(qta.icon(icon_name, color="#94A3B8"))
-
-    # ── Status Bar ─────────────────────────────────────────────────────────────
 
     def _setup_status_bar(self):
         bar = QStatusBar()

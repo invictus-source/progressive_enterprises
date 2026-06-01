@@ -1,20 +1,11 @@
-# In your login.py
-from theme import ThemeManager  # Adjust this import based on your project structure
+from theme import ThemeManager
 
 
 def get_login_stylesheet() -> str:
-    """
-    Dynamically generates the stylesheet for the login window
-    based on the current active theme in ThemeManager.
-    """
-    # Grab the current theme tokens (Light or Dark)
     T = ThemeManager.tokens()
 
-    # We use double braces {{ }} in f-strings to output actual CSS curly braces
     return f"""
         QDialog {{
-            /* Using bg_base here gives the window a slightly recessed look, 
-               making input fields (bg_input) pop out more */
             background-color: {T['bg_base']};
         }}
 
@@ -35,7 +26,6 @@ def get_login_stylesheet() -> str:
             border: 1px solid {T['border_strong']};
             border-radius: 6px;
             font-size: 14px;
-            /* bg_input ensures high contrast against bg_base */
             background-color: {T['bg_input']}; 
             color: {T['text_primary']};
         }}
@@ -46,7 +36,7 @@ def get_login_stylesheet() -> str:
 
         QPushButton#loginBtn {{
             background-color: {T['accent']};
-            color: #FFFFFF; /* Buttons with accent color always use white text */
+            color: #FFFFFF;
             padding: 12px;
             border-radius: 6px;
             font-size: 16px;

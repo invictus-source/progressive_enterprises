@@ -1,7 +1,3 @@
-"""
-Progressive Enterprises – Purchases / GRN Module
-"""
-
 from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -17,7 +13,6 @@ from ui.components.data_table import DataTable
 from core.auth import AuthSession
 import config
 
-
 def _next_grn(session) -> str:
     today = datetime.now()
     prefix = f"GRN-{today.year}{today.month:02d}"
@@ -25,9 +20,7 @@ def _next_grn(session) -> str:
     seq = int(last.grn_no.split("-")[-1]) + 1 if last else 1
     return f"{prefix}-{seq:04d}"
 
-
 def _parse_int(text: str, field: str, min_val: int = 1, max_val: int = 9999) -> int:
-    """Parse integer from text with validation. Raises ValueError with clear message."""
     text = text.strip()
     if not text:
         raise ValueError(f"{field} is required.")
@@ -41,9 +34,7 @@ def _parse_int(text: str, field: str, min_val: int = 1, max_val: int = 9999) -> 
         raise ValueError(f"{field} must be no more than {max_val}.")
     return val
 
-
 def _parse_float(text: str, field: str, min_val: float = 0.0, max_val: float = 999999.0) -> float:
-    """Parse float from text with validation. Raises ValueError with clear message."""
     text = text.strip().lstrip("₹").strip()
     if not text:
         raise ValueError(f"{field} is required.")
@@ -56,7 +47,6 @@ def _parse_float(text: str, field: str, min_val: float = 0.0, max_val: float = 9
     if val > max_val:
         raise ValueError(f"{field} must be no more than {max_val}.")
     return val
-
 
 class NewPurchaseDialog(QDialog):
     def __init__(self, parent=None):
@@ -75,7 +65,6 @@ class NewPurchaseDialog(QDialog):
         root.setContentsMargins(20, 20, 20, 20)
         root.setSpacing(14)
 
-        # Header info
         hdr = QHBoxLayout()
         hdr.setSpacing(14)
 
@@ -90,7 +79,6 @@ class NewPurchaseDialog(QDialog):
             hdr.addLayout(col)
         root.addLayout(hdr)
 
-        # Add item row
         add_row = QHBoxLayout(); add_row.setSpacing(10)
         self.product_combo = QComboBox(); self.product_combo.setMinimumWidth(250)
 
@@ -116,12 +104,10 @@ class NewPurchaseDialog(QDialog):
         add_row.addWidget(add_item_btn, alignment=Qt.AlignmentFlag.AlignBottom)
         root.addLayout(add_row)
 
-        # Validation error label
         self.item_error_lbl = QLabel("")
         self.item_error_lbl.setStyleSheet("color: #f87171; font-size: 11px; font-weight: 600;")
         root.addWidget(self.item_error_lbl)
 
-        # Items table
         self.items_table = QTableWidget()
         self.items_table.setColumnCount(7)
         self.items_table.setHorizontalHeaderLabels(["Product", "Qty", "Unit Price", "GST%", "Taxable", "GST Amt", "Total"])
@@ -131,7 +117,6 @@ class NewPurchaseDialog(QDialog):
         self.items_table.horizontalHeader().setStretchLastSection(True)
         root.addWidget(self.items_table, 1)
 
-        # Totals & actions
         bottom = QHBoxLayout()
         self.totals_lbl = QLabel("Grand Total: ₹0.00")
         self.totals_lbl.setStyleSheet("font-size: 18px; font-weight: bold; color: #60a5fa;")
@@ -252,7 +237,6 @@ class NewPurchaseDialog(QDialog):
             QMessageBox.critical(self, "Error", str(e))
         finally:
             session.close()
-
 
 class PurchasesPage(QWidget):
     def __init__(self):

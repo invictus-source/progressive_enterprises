@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – First-Run Setup Wizard
-Multi-step wizard shown on first install to configure company and admin account.
-"""
-
 import bcrypt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -20,7 +15,6 @@ except ImportError:
 
 import config
 
-
 STEPS = [
     ("🏠", "Welcome",         "Let's get your store set up"),
     ("🏢", "Company Info",    "Tell us about your business"),
@@ -28,7 +22,6 @@ STEPS = [
     ("💾", "Data Storage",    "Where should data be saved?"),
     ("✅", "All Done!",       "Your system is ready"),
 ]
-
 
 class SetupWizard(QDialog):
     def __init__(self, parent=None):
@@ -46,7 +39,6 @@ class SetupWizard(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Left sidebar (steps) ───────────────────────────────────────────
         self.left_panel = QWidget()
         self.left_panel.setObjectName("WizardStep")
         self.left_panel.setFixedWidth(220)
@@ -54,7 +46,6 @@ class SetupWizard(QDialog):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
 
-        # Brand block
         brand = QWidget()
         brand.setFixedHeight(100)
         brand.setStyleSheet("""
@@ -80,7 +71,6 @@ class SetupWizard(QDialog):
         bl.addWidget(app_lbl)
         left_layout.addWidget(brand)
 
-        # Step indicators
         steps_widget = QWidget()
         steps_layout = QVBoxLayout(steps_widget)
         steps_layout.setContentsMargins(16, 24, 16, 16)
@@ -106,7 +96,6 @@ class SetupWizard(QDialog):
         steps_layout.addStretch()
         left_layout.addWidget(steps_widget, 1)
 
-        # Version label
         ver = QLabel(f"v{config.APP_VERSION}")
         ver.setStyleSheet("color: rgba(255,255,255,0.3); font-size: 10px; padding: 8px;")
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -114,12 +103,10 @@ class SetupWizard(QDialog):
 
         root.addWidget(self.left_panel)
 
-        # ── Right content area ─────────────────────────────────────────────
         right = QVBoxLayout()
         right.setContentsMargins(0, 0, 0, 0)
         right.setSpacing(0)
 
-        # Title bar
         title_bar = QWidget()
         title_bar.setFixedHeight(46)
         title_bar.setStyleSheet("background: transparent; border-bottom: 1px solid rgba(255,255,255,0.06);")
@@ -131,7 +118,6 @@ class SetupWizard(QDialog):
         tb_layout.addStretch()
         right.addWidget(title_bar)
 
-        # Stacked pages
         self.stack = QStackedWidget()
         self.stack.addWidget(self._page_welcome())
         self.stack.addWidget(self._page_company())
@@ -140,7 +126,6 @@ class SetupWizard(QDialog):
         self.stack.addWidget(self._page_done())
         right.addWidget(self.stack, 1)
 
-        # Navigation footer
         footer = QWidget()
         footer.setFixedHeight(62)
         footer.setObjectName("DialogFooter")
@@ -184,8 +169,6 @@ class SetupWizard(QDialog):
         vl.addWidget(lbl); vl.addWidget(widget)
         return w
 
-    # ── Pages ──────────────────────────────────────────────────────────────
-
     def _page_welcome(self) -> QWidget:
         w = QWidget()
         vl = QVBoxLayout(w)
@@ -209,7 +192,6 @@ class SetupWizard(QDialog):
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub.setWordWrap(True)
 
-        # Feature list
         features = [
             ("🧾", "Point of Sale & Invoice Generation"),
             ("📦", "Inventory & Stock Management"),
@@ -330,7 +312,6 @@ class SetupWizard(QDialog):
         vl.addWidget(sub)
         vl.addSpacing(10)
 
-        # Show default path
         lbl = QLabel("CURRENT DATA FOLDER")
         lbl.setObjectName("FieldLabel")
         vl.addWidget(lbl)
@@ -386,8 +367,6 @@ class SetupWizard(QDialog):
         vl.addStretch()
         return w
 
-    # ── Navigation ─────────────────────────────────────────────────────────
-
     def _go_to(self, step: int):
         self._step = step
         self.stack.setCurrentIndex(step)
@@ -400,7 +379,6 @@ class SetupWizard(QDialog):
         else:
             self.next_btn.setText("Next  →")
 
-        # Update indicators
         for i, (num_lbl, text_lbl, icon) in enumerate(self._step_widgets):
             if i < step:
                 num_lbl.setText("✓")
@@ -414,7 +392,6 @@ class SetupWizard(QDialog):
                 num_lbl.setText(str(i + 1))
                 num_lbl.setObjectName("StepIndicatorPending")
                 text_lbl.setObjectName("StepLabel")
-            # Force style refresh
             num_lbl.style().unpolish(num_lbl)
             num_lbl.style().polish(num_lbl)
             text_lbl.style().unpolish(text_lbl)
@@ -466,7 +443,6 @@ class SetupWizard(QDialog):
             self.data_path_lbl.setText(new_dir)
 
     def _finish(self):
-        # Hash admin password and save
         pwd = self.w_admin_pwd.text()
         pwd_hash = bcrypt.hashpw(pwd.encode(), bcrypt.gensalt()).decode()
         company_data = {

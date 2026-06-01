@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Generic Form Dialog Base Class
-Responsive dialog that adapts to screen size.
-"""
-
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QScrollArea, QWidget, QSizePolicy,
@@ -13,23 +8,6 @@ from PySide6.QtGui import QFont, QScreen
 
 
 class FormDialog(QDialog):
-    """
-    Base dialog with a standardised header, scrollable body, and footer buttons.
-    Responsive to screen size - adapts width and enables scrolling for forms.
-    Subclass this for every add/edit form.
-
-    Usage:
-        class AddCustomerDialog(FormDialog):
-            def __init__(self):
-                super().__init__("Add Customer", "➕ New Customer", width=520)
-                # Add form fields to self.body_layout
-                self.name_edit = QLineEdit()
-                self.add_field("Full Name *", self.name_edit)
-                self.finalize()
-
-            def _collect(self):
-                return {"name": self.name_edit.text().strip()}
-    """
 
     def __init__(self, title: str, subtitle: str = "",
                  width: int = 520, height: int = 0, parent=None):
@@ -63,7 +41,6 @@ class FormDialog(QDialog):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # Header - smaller on compact screens
         header = QWidget()
         header.setObjectName("DialogHeader")
         self._header = header
@@ -83,7 +60,6 @@ class FormDialog(QDialog):
 
         root.addWidget(header)
 
-        # Error message container (for inline validation errors)
         self.error_frame = QFrame()
         self.error_frame.setObjectName("ToastError")
         self.error_frame.setStyleSheet("""
@@ -113,12 +89,10 @@ class FormDialog(QDialog):
         self.error_frame.hide()
         root.addWidget(self.error_frame)
 
-        # Separator
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         root.addWidget(sep)
 
-        # Scrollable body - critical for small screens
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -135,7 +109,6 @@ class FormDialog(QDialog):
         scroll.setWidget(body_wrapper)
         root.addWidget(scroll, 1)
 
-        # Footer - compact on small screens
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.Shape.HLine)
         root.addWidget(sep2)
@@ -168,15 +141,11 @@ class FormDialog(QDialog):
     def _hide_error(self):
         self.error_frame.hide()
 
-    # ── Helpers for subclasses ─────────────────────────────────────────────
-
     def add_field(self, label: str, widget, hint: str = ""):
-        """Add a label + widget row to the form body."""
         lbl = QLabel(label)
         lbl.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: bold;")
         self.body_layout.addWidget(lbl)
         
-        # Make input widgets expand properly
         if isinstance(widget, (QLineEdit, QComboBox, QTextEdit)):
             widget.setMinimumWidth(200)
         
@@ -187,7 +156,6 @@ class FormDialog(QDialog):
             self.body_layout.addWidget(h)
 
     def add_row(self, *widgets):
-        """Add multiple widgets side by side - will stack on small screens."""
         row = QHBoxLayout()
         row.setSpacing(8)
         for w in widgets:
@@ -205,13 +173,9 @@ class FormDialog(QDialog):
         self.body_layout.addWidget(lbl)
 
     def finalize(self):
-        """Call at end of subclass __init__ to add stretch."""
         self.body_layout.addStretch()
 
-    # ── Save flow ─────────────────────────────────────────────────────────
-
     def _on_save(self):
-        """Override in subclass, or let _collect() drive it."""
         self._hide_error()
         try:
             data = self._collect()
@@ -222,14 +186,11 @@ class FormDialog(QDialog):
             self._show_error(str(e))
 
     def _collect(self) -> dict | None:
-        """Override in subclass. Return dict of form data or raise ValidationError."""
         return {}
 
     def get_data(self) -> dict | None:
-        """After exec() == Accepted, call this to get form data."""
         return self._result_data
 
 
 class ValidationError(Exception):
-    """Raise from _collect() to show a validation warning."""
     pass

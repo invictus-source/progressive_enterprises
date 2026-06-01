@@ -1,14 +1,9 @@
-# --- Core Framework ---
 PySide6>=6.6
 SQLAlchemy>=2.0
 bcrypt>=4.0
-
-# --- Export & Reporting ---
 reportlab>=4.0
 openpyxl>=3.1
 matplotlib>=3.8
-
-# --- Utilities & Packaging ---
 Pillow>=10.0
 qtawesome>=1.4
 PyInstaller>=6.0

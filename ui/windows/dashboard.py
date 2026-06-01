@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Dashboard Page
-KPI cards, recent transactions, quick-action buttons.
-"""
-
 from datetime import date, datetime, timedelta
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -24,7 +19,6 @@ class DashboardPage(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        # Wrap everything in a scroll area
         page_layout = QVBoxLayout(self)
         page_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -37,7 +31,6 @@ class DashboardPage(QWidget):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(16)
 
-        # ── Header ────────────────────────────────────────────────────────
         header = QHBoxLayout()
         title_block = QVBoxLayout()
         title_lbl = QLabel("Dashboard")
@@ -57,7 +50,6 @@ class DashboardPage(QWidget):
 
         layout.addLayout(header)
 
-        # ── KPI Cards ─────────────────────────────────────────────────────
         self.card_revenue   = StatCard("💰", "Today's Revenue",  "₹0",    "#2563eb")
         self.card_sales     = StatCard("🧾", "Sales Today",      "0",     "#7c3aed")
         self.card_customers = StatCard("👥", "Total Customers",  "0",     "#0891b2")
@@ -72,10 +64,9 @@ class DashboardPage(QWidget):
 
         self.kpi_grid = QGridLayout()
         self.kpi_grid.setSpacing(12)
-        self._layout_kpi_cards(3)  # default 3 columns
+        self._layout_kpi_cards(3)
         layout.addLayout(self.kpi_grid)
 
-        # ── Quick Actions ─────────────────────────────────────────────────
         qa_frame = QFrame()
         qa_frame.setObjectName("Card")
         qa_layout = QHBoxLayout(qa_frame)
@@ -106,11 +97,9 @@ class DashboardPage(QWidget):
 
         layout.addWidget(qa_frame)
 
-        # ── Bottom: Two-column section ──────────────────────────────────
         bottom = QHBoxLayout()
         bottom.setSpacing(14)
 
-        # Recent Sales
         left_frame = QFrame()
         left_frame.setObjectName("Card")
         left_layout = QVBoxLayout(left_frame)
@@ -132,7 +121,6 @@ class DashboardPage(QWidget):
         left_layout.addWidget(self.recent_sales_table, 1)
         bottom.addWidget(left_frame, 3)
 
-        # Overdue EMIs
         right_frame = QFrame()
         right_frame.setObjectName("Card")
         right_layout = QVBoxLayout(right_frame)
@@ -160,11 +148,8 @@ class DashboardPage(QWidget):
         page_layout.addWidget(scroll)
 
     def _layout_kpi_cards(self, cols: int):
-        """Re-arrange KPI cards into `cols` columns."""
-        # Remove all items from grid
         while self.kpi_grid.count():
             item = self.kpi_grid.takeAt(0)
-            # Don't delete the widget, just remove from layout
         for i, card in enumerate(self._kpi_cards):
             row = i // cols
             col = i % cols
@@ -182,14 +167,12 @@ class DashboardPage(QWidget):
         self._layout_kpi_cards(cols)
 
     def refresh(self):
-        """Reload all KPI data from the database."""
         session = get_db()
         try:
             today = date.today()
             today_start = datetime.combine(today, datetime.min.time())
             today_end = datetime.combine(today, datetime.max.time())
 
-            # Today's revenue & sales count
             today_sales = session.query(Sale).filter(
                 Sale.sale_date.between(today_start, today_end),
                 Sale.is_cancelled == False
@@ -198,31 +181,26 @@ class DashboardPage(QWidget):
             self.card_revenue.update_value(f"₹{revenue:,.0f}")
             self.card_sales.update_value(str(len(today_sales)))
 
-            # Total customers
             cust_count = session.query(Customer).filter_by(is_active=True).count()
             self.card_customers.update_value(str(cust_count))
 
-            # Pending EMI payments (unpaid, due <= today)
             pending_emi = session.query(EMIPayment).filter_by(is_paid=False).filter(
                 EMIPayment.due_date <= today
             ).count()
             self.card_emi.update_value(str(pending_emi))
 
-            # Low stock
             low_stock = session.query(Product).filter(
                 Product.is_active == True,
                 Product.stock_qty <= Product.min_stock
             ).count()
             self.card_stock.update_value(str(low_stock))
 
-            # Outstanding due from all sales
             total_due = session.query(Sale).filter(
                 Sale.is_cancelled == False
             ).all()
             outstanding = sum(s.balance_due for s in total_due)
             self.card_due.update_value(f"₹{outstanding:,.0f}")
 
-            # Recent sales table
             recent = session.query(Sale).filter(
                 Sale.is_cancelled == False
             ).order_by(Sale.sale_date.desc()).limit(10).all()
@@ -239,7 +217,6 @@ class DashboardPage(QWidget):
             self.recent_sales_table.horizontalHeader().setSectionResizeMode(
                 QHeaderView.ResizeMode.ResizeToContents)
 
-            # Overdue EMIs
             overdue = session.query(EMIPayment).filter(
                 EMIPayment.is_paid == False,
                 EMIPayment.due_date < today

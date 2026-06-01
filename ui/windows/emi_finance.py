@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – EMI / Finance Module
-Finance provider management + EMI records + payment schedule tracker.
-"""
-
 from datetime import date, timedelta
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -18,7 +13,6 @@ from ui.components.form_dialog import FormDialog, ValidationError
 from db.manager import get_db
 from db.models import EMIRecord, EMIPayment, FinanceProvider, Customer, Sale
 from core.auth import AuthSession
-
 
 class AddFinanceProviderDialog(FormDialog):
     def __init__(self, provider=None, parent=None):
@@ -48,7 +42,6 @@ class AddFinanceProviderDialog(FormDialog):
                 "phone": self.phone_edit.text().strip() or None,
                 "email": self.email_edit.text().strip() or None,
                 "notes": self.notes_edit.toPlainText().strip() or None}
-
 
 class NewEMIDialog(QDialog):
     def __init__(self, parent=None):
@@ -95,7 +88,6 @@ class NewEMIDialog(QDialog):
         self.emi_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #60a5fa;")
         root.addWidget(self.emi_lbl)
 
-        # Validation error label
         self.val_error_lbl = QLabel("")
         self.val_error_lbl.setStyleSheet("color: #f87171; font-size: 11px; font-weight: 600;")
         root.addWidget(self.val_error_lbl)
@@ -120,7 +112,6 @@ class NewEMIDialog(QDialog):
             session.close()
 
     def _recalc(self):
-        """Live EMI preview – silently ignores invalid text while typing."""
         try:
             loan = float(self.loan_edit.text().strip().lstrip("₹") or 0)
             down = float(self.down_edit.text().strip().lstrip("₹") or 0)
@@ -147,7 +138,6 @@ class NewEMIDialog(QDialog):
             self.val_error_lbl.setText("Please select a customer."); return
         if not provider_id:
             self.val_error_lbl.setText("Please select a finance provider."); return
-        # Parse and validate all numeric fields
         try:
             loan_text = self.loan_edit.text().strip().lstrip("₹").strip()
             if not loan_text:
@@ -208,7 +198,6 @@ class NewEMIDialog(QDialog):
         finally:
             session.close()
 
-
 class EMIFinancePage(QWidget):
     def __init__(self):
         super().__init__()
@@ -232,7 +221,6 @@ class EMIFinancePage(QWidget):
         tabs = QTabWidget()
         layout.addWidget(tabs)
 
-        # ── Tab 1: EMI Records ──────────────────────────────────────────────
         emi_tab = QWidget()
         emi_layout = QVBoxLayout(emi_tab)
         emi_layout.setContentsMargins(12, 12, 12, 12)
@@ -249,7 +237,6 @@ class EMIFinancePage(QWidget):
         emi_layout.addWidget(self.emi_table)
         tabs.addTab(emi_tab, "💳  EMI Records")
 
-        # ── Tab 2: Overdue ──────────────────────────────────────────────────
         overdue_tab = QWidget()
         overdue_layout = QVBoxLayout(overdue_tab)
         overdue_layout.setContentsMargins(12, 12, 12, 12)
@@ -263,7 +250,6 @@ class EMIFinancePage(QWidget):
         overdue_layout.addWidget(self.overdue_table)
         tabs.addTab(overdue_tab, "⚠️  Overdue Installments")
 
-        # ── Tab 3: Finance Providers ─────────────────────────────────────────
         fp_tab = QWidget()
         fp_layout = QVBoxLayout(fp_tab)
         fp_layout.setContentsMargins(12, 12, 12, 12)

@@ -1,11 +1,7 @@
-"""
-Progressive Enterprises – Full ThemeManager
-Dark & Light themes with live toggle, QSS generation, and persisted prefs.
-"""
 import base64
 
 from PySide6.QtWidgets import QApplication
-import PySide6.QtSvg  # CRITICAL: Forces Qt to load the SVG image plugin!
+import PySide6.QtSvg
 
 
 class ThemeManager:
@@ -14,57 +10,53 @@ class ThemeManager:
 
     THEMES = {
             "dark": {
-                "bg_base": "#0F172A",  # Slate 900 (Deep background)
-                "bg_surface": "#1E293B",  # Slate 800 (Cards/Panels)
-                "bg_elevated": "#334155",  # Slate 700 (Modals/Hover states)
-                "bg_input": "#0F172A",  # Slate 900 (Inputs need to feel recessed)
-                "border": "#334155",  # Slate 700 (Subtle dividers)
-                "border_strong": "#475569",  # Slate 600 (Input borders/focus)
+                "bg_base": "#0F172A",
+                "bg_surface": "#1E293B",
+                "bg_elevated": "#334155",
+                "bg_input": "#0F172A",
+                "border": "#334155",
+                "border_strong": "#475569",
 
-                # UI Accents (Shifted to 400-level to pass 4.5:1 on Slate 800)
-                "accent": "#60A5FA",  # Blue 400 (5.2:1 contrast)
-                "accent_hover": "#93C5FD",  # Blue 300
-                "accent_dark": "#3B82F6",  # Blue 500
-                "success": "#34D399",  # Emerald 400 (6.6:1 contrast)
-                "success_dark": "#10B981",  # Emerald 500
-                "danger": "#F87171",  # Red 400 (5.2:1 contrast)
-                "danger_dark": "#EF4444",  # Red 500
-                "warning": "#FBBF24",  # Amber 400 (8.0:1 contrast)
-                "warning_dark": "#F59E0B",  # Amber 500
-                "purple": "#A78BFA",  # Violet 400
-                "cyan": "#22D3EE",  # Cyan 400
+                "accent": "#60A5FA",
+                "accent_hover": "#93C5FD",
+                "accent_dark": "#3B82F6",
+                "success": "#34D399",
+                "success_dark": "#10B981",
+                "danger": "#F87171",
+                "danger_dark": "#EF4444",
+                "warning": "#FBBF24",
+                "warning_dark": "#F59E0B",
+                "purple": "#A78BFA",
+                "cyan": "#22D3EE",
 
-                # Text (Optimized for readability on Slate 800)
-                "text_primary": "#F8FAFC",  # Slate 50 (14.2:1 contrast)
-                "text_secondary": "#CBD5E1",  # Slate 300 (8.6:1 contrast)
-                "text_muted": "#94A3B8",  # Slate 400 (4.7:1 contrast - Passes AA)
+                "text_primary": "#F8FAFC",
+                "text_secondary": "#CBD5E1",
+                "text_muted": "#94A3B8",
                 "sidebar_w": 240,
             },
             "light": {
-                "bg_base": "#F8FAFC",  # Slate 50 (Clean, highly contrasting base)
-                "bg_surface": "#FFFFFF",  # White (Cards/Panels)
-                "bg_elevated": "#F1F5F9",  # Slate 100 (Hover/Header)
-                "bg_input": "#FFFFFF",  # White
-                "border": "#E2E8F0",  # Slate 200 (Clean, non-distracting borders)
-                "border_strong": "#CBD5E1",  # Slate 300 (Input outlines)
+                "bg_base": "#F8FAFC",
+                "bg_surface": "#FFFFFF",
+                "bg_elevated": "#F1F5F9",
+                "bg_input": "#FFFFFF",
+                "border": "#E2E8F0",
+                "border_strong": "#CBD5E1",
 
-                # UI Accents (Shifted to 600-level to pass 4.5:1 on White)
-                "accent": "#2563EB",  # Blue 600 (5.2:1 contrast)
-                "accent_hover": "#1D4ED8",  # Blue 700
-                "accent_dark": "#1E40AF",  # Blue 800
-                "success": "#059669",  # Emerald 600 (4.8:1 contrast)
-                "success_dark": "#047857",  # Emerald 700
-                "danger": "#DC2626",  # Red 600 (5.2:1 contrast)
-                "danger_dark": "#B91C1C",  # Red 700
-                "warning": "#B45309",  # Amber 700 (5.4:1 contrast - Amber 600 fails AA for text!)
-                "warning_dark": "#92400E",  # Amber 800
-                "purple": "#7C3AED",  # Violet 600
-                "cyan": "#0891B2",  # Cyan 600
+                "accent": "#2563EB",
+                "accent_hover": "#1D4ED8",
+                "accent_dark": "#1E40AF",
+                "success": "#059669",
+                "success_dark": "#047857",
+                "danger": "#DC2626",
+                "danger_dark": "#B91C1C",
+                "warning": "#B45309",
+                "warning_dark": "#92400E",
+                "purple": "#7C3AED",
+                "cyan": "#0891B2",
 
-                # Text (Optimized to reduce eye strain while maintaining AAA)
-                "text_primary": "#0F172A",  # Slate 900 (15.6:1 contrast)
-                "text_secondary": "#334155",  # Slate 700 (9.4:1 contrast)
-                "text_muted": "#64748B",  # Slate 500 (4.6:1 contrast - Passes AA)
+                "text_primary": "#0F172A",
+                "text_secondary": "#334155",
+                "text_muted": "#64748B",
                 "sidebar_w": 240,
             }
     }
@@ -142,15 +134,12 @@ class ThemeManager:
 
         icon_color = T['text_secondary']
 
-        # 1. Define the raw SVG strings (Using strict standard double quotes for XML attributes)
         raw_down = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>"""
         raw_up = f"""<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>"""
 
-        # 2. Encode to Base64
         b64_down = base64.b64encode(raw_down.encode('utf-8')).decode('utf-8')
         b64_up = base64.b64encode(raw_up.encode('utf-8')).decode('utf-8')
 
-        # 3. Format with ESCAPED quotes inside the url() block for Qt Parser compatibility
         down_arrow_svg = f"url(\"data:image/svg+xml;base64,{b64_down}\")"
         up_arrow_svg = f"url(\"data:image/svg+xml;base64,{b64_up}\")"
 
@@ -711,7 +700,7 @@ QProgressBar {{
     text-align: center; color: transparent;
 }}
 QProgressBar::chunk {{
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+    background: qlineargradient(x1:0,y1:0,x2:1,y2=0,
         stop:0 {a}, stop:1 {ah});
     border-radius: 6px;
 }}
@@ -723,7 +712,7 @@ QProgressBar::chunk {{
     border-radius: 20px;
 }}
 #WizardStep {{
-    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+    background: qlineargradient(x1:0,y1:0,x2:0,y2=1,
         stop:0 {'#0D1B2A' if dk else '#F0F4F8'},
         stop:1 {'#1B2838' if dk else '#FFFFFF'});
     border-right: 1px solid {T['border']};

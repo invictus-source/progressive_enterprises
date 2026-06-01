@@ -1,22 +1,12 @@
-"""
-Progressive Enterprises – Application Configuration
-All paths are computed at runtime — DO NOT hardcode paths here.
-"""
-
 import os
 import sys
 import json
 
-# ── App Meta ──────────────────────────────────────────────────────────────────
 APP_NAME        = "Progressive Enterprises"
 APP_FULL_NAME   = "Progressive Enterprises – Business Suite"
 APP_VERSION     = "1.0.0"
 APP_PUBLISHER   = "Progressive Enterprises"
 DEVELOPER_COMPANY = "Emberflock Labs"
-
-# ── Data Directory (survives updates / reinstalls) ────────────────────────────
-# Default: C:\Users\<user>\AppData\Roaming\ProgressiveEnterprises\data\
-# Override by setting env var PROGRESSIVE_DATA_DIR before launching.
 
 _default_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Roaming",
                                 "ProgressiveEnterprises", "data")
@@ -43,12 +33,10 @@ BACKUPS_DIR  = os.path.join(DATA_DIR, "backups")
 PREFS_FILE   = os.path.join(DATA_DIR, "prefs.json")
 SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 
-# Ensure directories exist
 for _d in [DATA_DIR, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR]:
     os.makedirs(_d, exist_ok=True)
 
 def set_custom_data_dir(new_dir: str):
-    """Save custom data directory preference so it survives restarts."""
     global DATA_DIR, DB_PATH, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR, PREFS_FILE, SETTINGS_FILE
     
     os.makedirs(os.path.dirname(_launcher_json), exist_ok=True)
@@ -66,12 +54,10 @@ def set_custom_data_dir(new_dir: str):
     for _d in [DATA_DIR, INVOICES_DIR, EXPORTS_DIR, BACKUPS_DIR]:
         os.makedirs(_d, exist_ok=True)
 
-# ── Developer / Seed Account ──────────────────────────────────────────────────
 DEV_USERNAME  = "ayushjha"
-DEV_PASSWORD  = "Ayush@2106"     # plain text; hashed on first-run DB seed
+DEV_PASSWORD  = "Ayush@2106"
 DEV_FULL_NAME = "Ayush Jha"
 
-# ── Company Info (loaded from settings.json, with defaults) ──────────────────
 def _load_settings() -> dict:
     if os.path.exists(SETTINGS_FILE):
         try:
@@ -95,19 +81,14 @@ COMPANY_GSTIN       = _settings.get("company_gstin",       "00AAAAA0000A1Z5")
 COMPANY_STATE       = _settings.get("company_state",       "Rajasthan")
 COMPANY_STATE_CODE  = _settings.get("company_state_code",  "08")
 
-# ── GST Slabs ─────────────────────────────────────────────────────────────────
 GST_SLABS = [0, 5, 12, 18, 28]
 
-# Backward compat alias
 DB_NAME = "progressive.db"
 
-# ── First-run Detection ───────────────────────────────────────────────────────
 def is_first_run() -> bool:
-    """True if the DB does not exist yet (genuine first install)."""
     return not os.path.exists(DB_PATH)
 
 def mark_setup_complete(company_data: dict, admin_username: str, admin_pwd_hash: str):
-    """Called by the setup wizard after completion."""
     global COMPANY_NAME, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL
     global COMPANY_GSTIN, COMPANY_STATE, COMPANY_STATE_CODE
     COMPANY_NAME       = company_data.get("company_name",  COMPANY_NAME)
@@ -122,7 +103,6 @@ def mark_setup_complete(company_data: dict, admin_username: str, admin_pwd_hash:
                     "_admin_pwd_hash": admin_pwd_hash})
 
 def update_company_settings(data: dict):
-    """Persist company info changes from the Settings page."""
     global COMPANY_NAME, COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL
     global COMPANY_GSTIN, COMPANY_STATE, COMPANY_STATE_CODE
     curr = _load_settings()
@@ -136,7 +116,6 @@ def update_company_settings(data: dict):
     COMPANY_STATE      = data.get("company_state",      COMPANY_STATE)
     COMPANY_STATE_CODE = data.get("company_state_code", COMPANY_STATE_CODE)
 
-# ── User Preferences (theme, zoom, etc.) ─────────────────────────────────────
 def load_prefs() -> dict:
     if os.path.exists(PREFS_FILE):
         try:
@@ -152,7 +131,6 @@ def save_prefs(data: dict):
     with open(PREFS_FILE, "w", encoding="utf-8") as f:
         json.dump(curr, f, indent=2)
 
-# ── Assets ────────────────────────────────────────────────────────────────────
 _base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 ASSETS_DIR  = os.path.join(_base, "assets")
 LOGO_PATH   = os.path.join(ASSETS_DIR, "logo.png")

@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Inventory / Products Module
-Product catalog, stock management, category management.
-"""
-
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QTextEdit, QScrollArea,
@@ -19,7 +14,6 @@ import config
 
 
 def _parse_price(text: str, field: str) -> float:
-    """Parse a price field. Raises ValidationError with a clear message."""
     text = text.strip().lstrip("₹").strip()
     if not text:
         return 0.0
@@ -35,7 +29,6 @@ def _parse_price(text: str, field: str) -> float:
 
 
 def _parse_stock(text: str, field: str, default: int = 0) -> int:
-    """Parse a stock/quantity integer field. Raises ValidationError with a clear message."""
     text = text.strip()
     if not text:
         return default
@@ -197,14 +190,12 @@ class InventoryPage(QWidget):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(14)
 
-        # Header
         hdr = QHBoxLayout()
         title = QLabel("Inventory / Products")
         title.setObjectName("PageTitle")
         hdr.addWidget(title)
         hdr.addStretch()
 
-        # Category filter
         self.cat_combo = QComboBox()
         self.cat_combo.setFixedWidth(180)
         self.cat_combo.currentIndexChanged.connect(self.refresh)
@@ -213,7 +204,6 @@ class InventoryPage(QWidget):
 
         layout.addLayout(hdr)
 
-        # Summary strip
         self.summary_bar = QLabel("")
         self.summary_bar.setStyleSheet("color: #6e7681; font-size: 11px;")
         layout.addWidget(self.summary_bar)
@@ -237,7 +227,6 @@ class InventoryPage(QWidget):
     def refresh(self):
         session = get_db()
         try:
-            # Load categories into filter
             cats = session.query(Category).order_by(Category.name).all()
             current_cat_id = self.cat_combo.currentData()
             self.cat_combo.blockSignals(True)
@@ -277,7 +266,6 @@ class InventoryPage(QWidget):
                 f"Inventory value: ₹{total_val:,.0f}"
             )
 
-            # Colour low-stock rows red
             for r in range(self.table._table.rowCount()):
                 orig = self.table._original_indices[r] if r < len(self.table._original_indices) else None
                 if orig is not None and self._products[orig].stock_qty <= self._products[orig].min_stock:

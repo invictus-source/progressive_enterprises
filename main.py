@@ -1,20 +1,12 @@
-"""
-Progressive Enterprises – Application Entry Point
-"""
-
 import sys
 import os
 
-# Ensure project root is in path (needed as .exe)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# ── DPI Scaling (must be set before QApplication) ─────────────────────────
 os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
 os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")
 
-# ── Qt Plugin Path (frozen .exe via PyInstaller) ───────────────────────────
 if getattr(sys, "frozen", False):
-    # _MEIPASS is the unpacked _internal folder; tell Qt where plugins live
     _base = sys._MEIPASS
     _plugin_path = os.path.join(_base, "PySide6", "plugins")
     if os.path.isdir(_plugin_path):
@@ -33,12 +25,10 @@ def main():
     app.setApplicationVersion(config.APP_VERSION)
     app.setStyle("Fusion")
 
-    # Load saved preferences (theme, font scale)
     prefs = config.load_prefs()
     ThemeManager.load_from_prefs()
     app.setStyleSheet(ThemeManager.build_stylesheet())
 
-    # Restore font size
     font_size = prefs.get("font_scale", 10)
     try:
         font_size = int(font_size)
@@ -47,15 +37,13 @@ def main():
     font = QFont("Segoe UI", max(9, min(font_size, 18)))
     app.setFont(font)
 
-    # ── First-run Setup Wizard ─────────────────────────────────────────────
     if config.is_first_run():
         from ui.windows.setup_wizard import SetupWizard
         wizard = SetupWizard()
         result = wizard.exec()
         if result != QDialog.DialogCode.Accepted:
-            sys.exit(0)  # User cancelled setup – exit cleanly
+            sys.exit(0)
 
-    # ── Initialise Database ────────────────────────────────────────────────
     try:
         from db.manager import DatabaseManager
         DatabaseManager.init()
@@ -68,7 +56,6 @@ def main():
         )
         sys.exit(1)
 
-    # ── Login Window ───────────────────────────────────────────────────────
     from ui.windows.login import LoginWindow
     login = LoginWindow()
     result = login.exec()

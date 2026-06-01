@@ -1,8 +1,19 @@
-# Progressive Enterprises – ERP Suite Build Walkthrough
+# Progressive Enterprises — ERP Suite
 
-## What Was Built
+> A full-featured desktop ERP application for a local electronics shop, built with Python, PySide6, and SQLAlchemy. Covers POS billing, inventory management, EMI/finance tracking, GST reporting, and more.
 
-A **comprehensive ERP desktop application** for a local electronics shop, built entirely in Python + PySide6. The app covers every major business operation from POS to EMI tracking to GST filing.
+---
+
+## Quick Start
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python main.py
+```
+
+On first launch, the setup wizard will guide you through creating an admin account and entering your company details. After that, you'll be presented with the login screen.
 
 ---
 
@@ -10,89 +21,247 @@ A **comprehensive ERP desktop application** for a local electronics shop, built 
 
 ```
 progressive/
-├── main.py                 # Entry point (updated)
-├── config.py               # ✅ NEW – company config & dev credentials
-├── requirements.txt        # ✅ NEW
-├── db/
-│   ├── models.py           # ✅ NEW – 15 SQLAlchemy ORM tables
-│   └── manager.py          # ✅ NEW – DB singleton + first-run seed
+├── main.py                     Application entry point
+├── config.py                   Company config, paths, credentials, settings
+├── requirements.txt            Python dependencies
+├── build_installer.ps1          PyInstaller + Inno Setup build script
+├── progressive.iss             Inno Setup installer config
+├── convert_icon.py             PNG → ICO converter for app logo
+├── assets/
+│   ├── logo.png                Application logo (PNG)
+│   └── logo.ico                Application icon (ICO)
 ├── core/
-│   ├── auth.py             # ✅ NEW – bcrypt auth & role checks
-│   ├── invoice_gen.py      # ✅ NEW – PDF invoice (reportlab)
-│   └── excel_export.py     # ✅ NEW – Excel export (openpyxl)
+│   ├── auth.py                 bcrypt authentication & role checks
+│   ├── invoice_gen.py          PDF invoice generation (reportlab)
+│   └── excel_export.py         Excel report export (openpyxl)
+├── db/
+│   ├── models.py               15 SQLAlchemy ORM models
+│   ├── manager.py              Database singleton, init, seed data
+│   └── migrations.py           Schema migration engine
 └── ui/
-    ├── main.py             # ✅ REBUILT – sidebar + stacked pages
-    ├── styles/theme.py     # ✅ NEW – 700-line dark QSS stylesheet
+    ├── main.py                 MainWindow — sidebar + stacked pages
+    ├── styles/
+    │   ├── theme.py            Theme manager & 700+ line QSS builder
+    │   └── login.py            Login-specific stylesheet
     ├── components/
-    │   ├── sidebar.py      # ✅ NEW – collapsible nav sidebar
-    │   ├── data_table.py   # ✅ NEW – reusable live-search table
-    │   ├── stat_card.py    # ✅ NEW – KPI card widget
-    │   └── form_dialog.py  # ✅ NEW – styled base dialog
+    │   ├── sidebar.py          Collapsible navigation sidebar
+    │   ├── data_table.py       Reusable live-search data table
+    │   ├── stat_card.py        KPI metric card widget
+    │   ├── form_dialog.py      Styled base dialog for CRUD forms
+    │   ├── toast.py             Toast notification widget
+    │   └── export_dialog.py    Export success dialog with open/folder buttons
     └── windows/
-        ├── login.py        # ✅ REBUILT – dark card, bcrypt login
-        ├── dashboard.py    # ✅ NEW – 6 KPIs + recent sales + overdue EMIs
-        ├── customers.py    # ✅ NEW – CRUD + ledger popup (sales/EMI/payments)
-        ├── vendors.py      # ✅ NEW – CRUD + purchase history
-        ├── inventory.py    # ✅ NEW – products, stock adjust, low-stock alerts
-        ├── pos.py          # ✅ NEW – full POS cart, GST, stock deduct, invoice
-        ├── purchases.py    # ✅ NEW – GRN entry, stock increment, GST-in
-        ├── emi_finance.py  # ✅ NEW – EMI records, schedule, overdue tracker
-        ├── payments.py     # ✅ NEW – customer receipts + vendor payments
-        ├── gst_reports.py  # ✅ NEW – GSTR-1 style monthly GST report + export
-        ├── reports.py      # ✅ NEW – date-range sales/product/daily reports
-        ├── user_mgmt.py    # ✅ NEW – user CRUD with role protection
-        └── settings.py     # ✅ NEW – company info, dev panel, about
+        ├── login.py            Login window with bcrypt auth
+        ├── dashboard.py        6 KPI cards + recent sales + overdue EMIs
+        ├── customers.py        Customer CRUD + ledger popup
+        ├── vendors.py          Vendor CRUD + purchase history
+        ├── inventory.py        Product management + stock adjust + low-stock alerts
+        ├── pos.py              Full POS — search, cart, GST, invoice
+        ├── purchases.py        GRN entry, stock increment, GST-in
+        ├── emi_finance.py      EMI records, schedule, overdue tracker
+        ├── payments.py         Customer receipts + vendor payments
+        ├── gst_reports.py      GSTR-1 style monthly report + Excel export
+        ├── reports.py          Date-range sales reports + Excel export
+        ├── sales_history.py    Full sale record viewer
+        ├── user_mgmt.py        User management with role protection
+        ├── settings.py         Company info, dev panel, about
+        └── setup_wizard.py     First-run setup wizard
 ```
-
-## Verification Results
-
-| Check | Result |
-|---|---|
-| Syntax check across all 20 .py files | ✅ ALL OK |
-| Dependencies installed | ✅ All installed |
-| DB init + seeding | ✅ 10 categories, 9 finance providers, dev user |
-| Auth: dev login | ✅ dev/dev@2024 works |
 
 ---
 
-## How to Run
+## Modules
+
+### Authentication & Roles
+
+| Role | Capabilities |
+|---|---|
+| **Developer** | Full access including dev panel, DB backup, user management |
+| **Admin** | All business operations + user management |
+| **Staff** | POS, inventory, customers, vendors, purchases |
+
+- Passwords hashed with **bcrypt** — never stored in plaintext
+- Login attempt tracking with visual feedback
+- Session-based role enforcement across all windows
+
+### Point of Sale (POS)
+
+- Live product search by name or SKU
+- Cart system with quantity editing and line totals
+- Automatic GST calculation (CGST + SGST for intra-state)
+- Stock deduction on sale completion
+- PDF invoice generation with company branding
+- Sale record persisted with all line items
+
+### Inventory
+
+- Product listing with category filter
+- Stock adjustment dialog (add/remove/reason)
+- Low-stock rows highlighted in red
+- Category management from within the view
+- GST slab selection per product
+
+### Customers & Vendors
+
+- Full CRUD for both entities
+- Customer ledger popup with **Sales**, **EMI**, and **Payments** tabs
+- Vendor purchase history popup
+- GSTIN, banking details, and ID proof fields
+- Soft-delete with `is_active` flag
+
+### EMI / Finance
+
+- Create EMI schemes against customer sales
+- Auto-generate monthly instalment schedule
+- Overdue tracker with days-past-due calculation
+- Mark-as-paid with date and mode tracking
+- 9 pre-seeded finance providers
+
+### Purchases
+
+- GRN (Goods Received Note) entry linked to vendors
+- Automatic stock increment on purchase confirmation
+- GST-in tracking for input tax credit
+- Purchase history from vendor detail view
+
+### Payments
+
+- Customer payment receipts with mode and reference
+- Vendor payment tracking with mode and reference
+- Payment modes: Cash, UPI, Bank Transfer, Cheque, Card
+
+### GST Reports
+
+- GSTR-1 style outward supply report
+- Inward supply report for input tax credit
+- Monthly/annual period filter
+- Net GST payable computation
+- Excel export for filing
+
+### Reports
+
+- Date-range filtered sales reports
+- 4 KPI summary cards (revenue, orders, avg value, products sold)
+- Tab views: Transactions, Product-wise, Daily summary
+- Excel export with formatted sheets
+
+### Settings
+
+- Editable company name, address, GSTIN, contact info
+- Developer-only panel with DB backup/restore
+- About tab with version and tech stack info
+
+---
+
+## Data Models
+
+The application uses **15 SQLAlchemy ORM models** backed by SQLite:
+
+| Model | Purpose |
+|---|---|
+| `User` | Authentication and role management |
+| `Customer` | Customer records and GST details |
+| `Vendor` | Supplier/vendor records with banking |
+| `Category` | Product categories |
+| `Product` | Inventory items with pricing and stock |
+| `Sale` | Sale header with totals and GST |
+| `SaleItem` | Individual line items per sale |
+| `Purchase` | Purchase header linked to vendor |
+| `PurchaseItem` | Individual line items per purchase |
+| `Payment` | Customer and vendor payments |
+| `EMIRecord` | EMI scheme header |
+| `EMISchedule` | Individual instalment entries |
+| `FinanceProvider` | EMI finance company details |
+| `Settings` | Persistent key-value app settings |
+| `Migration` | Schema version tracking |
+
+All monetary fields use `Float` for INR values. Relationships use SQLAlchemy `relationship()` with back-populates for easy traversal.
+
+---
+
+## Configuration
+
+All configuration lives in `config.py`:
+
+| Constant | Default | Description |
+|---|---|---|
+| `APP_NAME` | `Progressive Enterprises` | Window title and app identity |
+| `APP_VERSION` | `1.0.0` | Displayed in About |
+| `DATA_DIR` | `%APPDATA%/ProgressiveEnterprises/data` | Database, invoices, exports live here |
+| `DEV_USERNAME` | `ayushjha` | Developer account username |
+| `DEV_PASSWORD` | `Ayush@2106` | Developer account password |
+| `GST_SLABS` | `[0, 5, 12, 18, 28]` | Available GST rate options |
+| `COMPANY_*` | Placeholder values | Editable via Settings window |
+
+Data paths can be overridden with the `PROGRESSIVE_DATA_DIR` environment variable, or configured via the launcher JSON file stored in AppData.
+
+---
+
+## Theming
+
+The app ships with a **dark mode** theme built in QSS (Qt Style Sheets):
+
+- Managed by `ui/styles/theme.py` — a `ThemeManager` class with 60+ color tokens
+- Tokens cover backgrounds, text, accents, borders, inputs, tables, and states
+- Theme preference persisted to `prefs.json` in the data directory
+- Font scale adjustable from Settings (9–18pt range)
+
+---
+
+## Building the Windows Installer
+
+### Prerequisites
+
+- Python 3.12+ with the virtual environment at `.venv`
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) installed
+
+### Build
 
 ```powershell
-# From d:\Projects\progressive\
-.venv\Scripts\python main.py
+powershell -ExecutionPolicy Bypass -File build_installer.ps1
 ```
 
-**Login credentials:**
-- **Username**: [dev](file:///d:/Projects/progressive/core/auth.py#62-65)
-- **Password**: `dev@2024`
+This script:
+1. Runs PyInstaller via the spec file to create the `dist/` bundle
+2. Writes `qt.conf` next to the exe for Qt plugin discovery
+3. Verifies critical Qt plugin DLLs are present
+4. Installs Inno Setup via `winget` if missing
+5. Compiles the installer exe using `progressive.iss`
 
-> Change these in [config.py](file:///d:/Projects/progressive/config.py) before production.
+The final installer lands at `installers/ProgressiveSetup_v1.0.0.exe`.
 
 ---
 
-## Key Features by Module
+## Data Storage
 
-| Module | Highlights |
+| Path | Contents |
 |---|---|
-| **Login** | Dark card UI, bcrypt auth, login attempt tracking |
-| **Dashboard** | 6 live KPI cards, recent sales, overdue EMI table |
-| **POS** | Product search, cart, GST calc (CGST+SGST), stock deduction, PDF invoice |
-| **Inventory** | Category filter, stock adjust dialog, red-highlight for low stock |
-| **Customers** | Full CRUD + ledger popup with Sales/EMI/Payments tabs |
-| **Vendors** | Full CRUD + purchase history popup, banking details |
-| **Purchases** | GRN entry, stock auto-increment, GST-in tracking |
-| **EMI / Finance** | Auto-schedule generation, overdue tracker, mark-as-paid, 9 seeded providers |
-| **Payments** | Customer receipts + vendor payments, mode/reference tracking |
-| **GST Reports** | Month/year filter, outward + inward supplies, net GST payable, Excel export |
-| **Reports** | Date-range filter, 4 KPI cards, transactions/product-wise/daily tabs, Excel export |
-| **User Mgmt** | Admin+ only, bcrypt passwords, role hierarchy enforcement |
-| **Settings** | Company info editor, developer-only DB backup, About tab |
+| `DATA_DIR/progressive.db` | SQLite database (all business data) |
+| `DATA_DIR/invoices/` | Generated PDF invoices |
+| `DATA_DIR/exports/` | Exported Excel reports |
+| `DATA_DIR/backups/` | Database backups from Settings |
+| `DATA_DIR/settings.json` | Company info and setup state |
+| `DATA_DIR/prefs.json` | Theme and UI preferences |
+
+The data directory is created automatically on first run. Backing up `progressive.db` is sufficient to preserve all business data.
 
 ---
 
-## Next Steps (Future)
+## Tech Stack
 
-- **Barcode scanner** support in POS (USB HID input already compatible via keyboard events)
-- **Logo upload** in Settings → stamp on invoices
-- **SMS/WhatsApp** reminders for overdue EMIs
-- **PyInstaller .exe** build: `pyinstaller --onefile --windowed main.py`
+| Layer | Technology |
+|---|---|
+| UI Framework | PySide6 (Qt for Python) |
+| Database | SQLite via SQLAlchemy 2.0 ORM |
+| Authentication | bcrypt password hashing |
+| PDF Invoices | reportlab |
+| Excel Export | openpyxl |
+| Icons | qtawesome (Font Awesome 5/6) |
+| Charts | matplotlib |
+| Packaging | PyInstaller + Inno Setup |
+
+---
+
+## License
+
+Proprietary — Progressive Enterprises & Emberflock Labs. All rights reserved.

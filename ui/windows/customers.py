@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Customers Module
-Customer list with search, add/edit dialog, and ledger popup.
-"""
-
 from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -104,7 +99,6 @@ class AddEditCustomerDialog(FormDialog):
 
 
 class CustomerLedgerDialog(QDialog):
-    """Shows all transactions for a customer."""
     def __init__(self, customer: Customer, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Ledger – {customer.name}")
@@ -125,19 +119,16 @@ class CustomerLedgerDialog(QDialog):
         tabs = QTabWidget()
         layout.addWidget(tabs)
 
-        # Sales tab
         sales_widget = QWidget()
         self.sales_table = self._make_table(["Invoice No", "Date", "Items", "Total", "Paid", "Balance", "Mode"])
         QVBoxLayout(sales_widget).addWidget(self.sales_table)
         tabs.addTab(sales_widget, "🧾  Sales")
 
-        # EMI tab
         emi_widget = QWidget()
         self.emi_table = self._make_table(["Sale", "Finance Co.", "Loan Amt", "Tenure", "EMI/Month", "Status"])
         QVBoxLayout(emi_widget).addWidget(self.emi_table)
         tabs.addTab(emi_widget, "💳  EMI Records")
 
-        # Payments tab
         pay_widget = QWidget()
         self.pay_table = self._make_table(["Date", "Amount", "Mode", "Reference", "Notes"])
         QVBoxLayout(pay_widget).addWidget(self.pay_table)
@@ -162,7 +153,6 @@ class CustomerLedgerDialog(QDialog):
         session = get_db()
         try:
             cid = self._customer.id
-            # Sales
             sales = session.query(Sale).filter_by(customer_id=cid, is_cancelled=False).order_by(Sale.sale_date.desc()).all()
             self.sales_table.setRowCount(len(sales))
             for r, s in enumerate(sales):
@@ -177,7 +167,6 @@ class CustomerLedgerDialog(QDialog):
                 ]):
                     self.sales_table.setItem(r, c, QTableWidgetItem(val))
 
-            # EMI
             emis = session.query(EMIRecord).filter_by(customer_id=cid).all()
             self.emi_table.setRowCount(len(emis))
             for r, e in enumerate(emis):
@@ -191,7 +180,6 @@ class CustomerLedgerDialog(QDialog):
                 ]):
                     self.emi_table.setItem(r, c, QTableWidgetItem(val))
 
-            # Payments
             payments = session.query(Payment).filter_by(customer_id=cid).order_by(Payment.payment_date.desc()).all()
             self.pay_table.setRowCount(len(payments))
             for r, p in enumerate(payments):
@@ -224,7 +212,6 @@ class CustomersPage(QWidget):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(14)
 
-        # Header
         hdr = QHBoxLayout()
         title = QLabel("Customers")
         title.setObjectName("PageTitle")
@@ -232,7 +219,6 @@ class CustomersPage(QWidget):
         hdr.addStretch()
         layout.addLayout(hdr)
 
-        # Table
         self.table = DataTable(
             columns=["#", "Name", "Phone", "City", "GSTIN", "Registered"],
             searchable=True,
@@ -294,7 +280,6 @@ class CustomersPage(QWidget):
             return
         session = get_db()
         try:
-            # Re-fetch to get a live object
             c = session.query(Customer).get(customer.id)
             dlg = AddEditCustomerDialog(customer=c, parent=self)
             if dlg.exec() == QDialog.DialogCode.Accepted:

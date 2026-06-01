@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – PDF Invoice Generator
-Uses reportlab to generate professional A4 invoices.
-"""
-
 import os
 import subprocess
 from datetime import datetime
@@ -28,10 +23,6 @@ WHITE = colors.white
 
 
 def generate_invoice(sale) -> str:
-    """
-    Generate a PDF invoice for the given Sale ORM object.
-    Returns the path to the saved PDF.
-    """
     out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "invoices")
     os.makedirs(out_dir, exist_ok=True)
     filename = os.path.join(out_dir, f"{sale.invoice_no}.pdf")
@@ -50,7 +41,6 @@ def generate_invoice(sale) -> str:
 
     story = []
 
-    # ── Header ────────────────────────────────────────────────────────────
     header_data = [[
         Paragraph(f'<font size=18 color="#2563eb"><b>{config.COMPANY_NAME}</b></font>', styles["Normal"]),
         Paragraph(
@@ -69,7 +59,6 @@ def generate_invoice(sale) -> str:
     story.append(header_table)
     story.append(HRFlowable(width="100%", thickness=2, color=ACCENT, spaceAfter=4))
 
-    # ── Invoice Meta ──────────────────────────────────────────────────────
     invoice_title = Paragraph('<font size=14 color="#2563eb"><b>TAX INVOICE</b></font>', center_style)
     story.append(invoice_title)
     story.append(Spacer(1, 4*mm))
@@ -101,7 +90,6 @@ def generate_invoice(sale) -> str:
     story.append(meta_table)
     story.append(Spacer(1, 5*mm))
 
-    # ── Items Table ───────────────────────────────────────────────────────
     items_header = ["#", "Product / Description", "HSN", "Qty", "Unit Price", "Disc%", "Taxable", "GST%", "GST Amt", "Total"]
     items_data = [items_header]
     for i, item in enumerate(sale.items, 1):
@@ -144,7 +132,6 @@ def generate_invoice(sale) -> str:
     story.append(items_table)
     story.append(Spacer(1, 5*mm))
 
-    # ── Totals ────────────────────────────────────────────────────────────
     totals_data = [
         ["", "Subtotal", f"Rs. {sale.subtotal:,.2f}"],
         ["", "Discount", f"Rs. {sale.discount_amount:,.2f}"],
@@ -167,7 +154,6 @@ def generate_invoice(sale) -> str:
     story.append(totals_table)
     story.append(Spacer(1, 6*mm))
 
-    # ── Footer ────────────────────────────────────────────────────────────
     story.append(HRFlowable(width="100%", thickness=0.5, color=MID_GREY))
     story.append(Spacer(1, 3*mm))
     story.append(Paragraph(

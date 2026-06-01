@@ -1,8 +1,3 @@
-"""
-Progressive Enterprises – Payments Module
-Record and track incoming/outgoing payments.
-"""
-
 from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -17,9 +12,7 @@ from db.manager import get_db
 from db.models import Payment, Customer, Vendor
 from core.auth import AuthSession
 
-
 def _parse_amount(text: str) -> float:
-    """Parse a monetary amount from text. Raises ValidationError on failure."""
     text = text.strip().lstrip("₹").strip()
     if not text:
         raise ValidationError("Amount is required.")
@@ -32,7 +25,6 @@ def _parse_amount(text: str) -> float:
     if val > 9_999_999:
         raise ValidationError("Amount exceeds maximum allowed value.")
     return val
-
 
 class AddPaymentDialog(FormDialog):
     def __init__(self, payment_type: str = "receipt", parent=None):
@@ -73,7 +65,6 @@ class AddPaymentDialog(FormDialog):
         self.notes_edit.setFixedHeight(55)
         self.add_field("Notes", self.notes_edit)
 
-        # Load data
         session = get_db()
         try:
             if self._type == "receipt":
@@ -104,7 +95,6 @@ class AddPaymentDialog(FormDialog):
             data["vendor_id"] = self._vend_combo.currentData()
         return data
 
-
 class PaymentsPage(QWidget):
     def __init__(self):
         super().__init__()
@@ -128,7 +118,6 @@ class PaymentsPage(QWidget):
         tabs = QTabWidget()
         layout.addWidget(tabs)
 
-        # Receipts tab
         receipts_tab = QWidget()
         rl = QVBoxLayout(receipts_tab); rl.setContentsMargins(12, 12, 12, 12)
         self.receipts_table = DataTable(
@@ -139,7 +128,6 @@ class PaymentsPage(QWidget):
         rl.addWidget(self.receipts_table)
         tabs.addTab(receipts_tab, "💰  Customer Receipts")
 
-        # Payments tab
         pays_tab = QWidget()
         pl = QVBoxLayout(pays_tab); pl.setContentsMargins(12, 12, 12, 12)
         self.pays_table = DataTable(

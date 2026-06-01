@@ -6,7 +6,6 @@ ico_path = 'assets/logo.ico'
 
 if os.path.exists(img_path):
     img = Image.open(img_path)
-    # Ensure square
     size = max(img.width, img.height)
     new_img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     new_img.paste(img, ((size - img.width) // 2, (size - img.height) // 2))
