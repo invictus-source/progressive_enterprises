@@ -180,7 +180,7 @@ class SettingsPage(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         al.addWidget(logo)
         for text, style in [
-            (config.APP_NAME, "font-size: 18px; font-weight: 800; color: #E8F4FD;"),
+            (config.APP_NAME, "font-size: 18px; font-weight: 800;"),
             (f"Version {config.APP_VERSION}", "color: #4E6D8C; font-size: 12px;"),
             ("", ""),
             (f"Developed by {config.DEVELOPER_COMPANY}", "font-size: 13px; font-weight: 700; color: #60a5fa;"),

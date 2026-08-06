@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QPushButton, QFrame, QScrollArea, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 
 from ui.components.stat_card import StatCard
 from db.manager import get_db
@@ -13,6 +13,8 @@ import config
 
 
 class DashboardPage(QWidget):
+    navigate_requested = Signal(str)
+
     def __init__(self):
         super().__init__()
         self._kpi_cards = []
@@ -38,6 +40,7 @@ class DashboardPage(QWidget):
         sub_lbl = QLabel(f"Welcome back!  •  {date.today().strftime('%A, %d %B %Y')}")
         sub_lbl.setObjectName("PageSubtitle")
         sub_lbl.setWordWrap(True)
+        sub_lbl.setMinimumWidth(280)
         title_block.addWidget(title_lbl)
         title_block.addWidget(sub_lbl)
         header.addLayout(title_block)
@@ -74,17 +77,17 @@ class DashboardPage(QWidget):
         qa_layout.setSpacing(10)
 
         qa_lbl = QLabel("Quick Actions")
-        qa_lbl.setStyleSheet("font-weight: bold; color: #8b949e; font-size: 11px;")
+        qa_lbl.setObjectName("FieldLabel")
         qa_layout.addWidget(qa_lbl)
         qa_layout.addStretch()
 
         quick_actions = [
             ("🛒  New Sale",      "#2563eb", "pos"),
-            ("📦  Add Stock",     "#7c3aed", "inventory"),
+            ("📦  New Purchase / GRN", "#7c3aed", "purchases"),
             ("👤  New Customer",  "#0891b2", "customers"),
-            ("💳  New EMI",       "#d97706", "emi"),
+            ("💳  Manage EMI",    "#d97706", "emi_finance"),
         ]
-        for label, color, _ in quick_actions:
+        for label, color, destination in quick_actions:
             btn = QPushButton(label)
             btn.setObjectName("PrimaryBtn")
             btn.setMinimumHeight(32)
@@ -92,6 +95,9 @@ class DashboardPage(QWidget):
                 f"QPushButton {{ background-color: {color}; color: white; border: none; "
                 f"border-radius: 8px; padding: 8px 14px; font-weight: bold; }}"
                 f"QPushButton:hover {{ opacity: 0.85; }}"
+            )
+            btn.clicked.connect(
+                lambda _checked=False, page=destination: self.navigate_requested.emit(page)
             )
             qa_layout.addWidget(btn)
 
@@ -107,7 +113,7 @@ class DashboardPage(QWidget):
         left_layout.setSpacing(8)
 
         left_title = QLabel("Recent Sales")
-        left_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #e2e8f0;")
+        left_title.setObjectName("SectionTitle")
         left_layout.addWidget(left_title)
 
         self.recent_sales_table = QTableWidget()
@@ -128,7 +134,7 @@ class DashboardPage(QWidget):
         right_layout.setSpacing(8)
 
         right_title = QLabel("Overdue EMIs")
-        right_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #e2e8f0;")
+        right_title.setObjectName("SectionTitle")
         right_layout.addWidget(right_title)
 
         self.overdue_table = QTableWidget()

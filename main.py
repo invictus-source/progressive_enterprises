@@ -19,6 +19,25 @@ from ui.styles.theme import ThemeManager
 import config
 
 
+def _run_packaged_self_test() -> int:
+    """Exercise packaged imports, Qt and a disposable database, then exit."""
+    try:
+        from db.manager import DatabaseManager
+        DatabaseManager.init()
+        import core.excel_export  # noqa: F401
+        from core.invoice_gen import generate_invoice  # noqa: F401
+        from ui.main import MainWindow  # noqa: F401
+        from ui.windows.pos import POSPage  # noqa: F401
+        from ui.windows.purchases import PurchasesPage  # noqa: F401
+        if not os.path.isfile(config.DB_PATH):
+            return 3
+        return 0
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        return 2
+
+
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName(config.APP_NAME)
@@ -29,13 +48,12 @@ def main():
     ThemeManager.load_from_prefs()
     app.setStyleSheet(ThemeManager.build_stylesheet())
 
-    font_size = prefs.get("font_scale", 10)
-    try:
-        font_size = int(font_size)
-    except (ValueError, TypeError):
-        font_size = 10
-    font = QFont("Segoe UI", max(9, min(font_size, 18)))
+    font_size = config.normalize_font_size(prefs.get("font_scale", 10))
+    font = QFont("Segoe UI", font_size)
     app.setFont(font)
+
+    if "--self-test" in sys.argv:
+        return _run_packaged_self_test()
 
     if config.is_first_run():
         from ui.windows.setup_wizard import SetupWizard
@@ -70,4 +88,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

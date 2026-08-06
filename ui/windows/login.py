@@ -2,7 +2,7 @@ import os
 from datetime import date
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QFrame, QWidget, QSizePolicy, QApplication
+    QLineEdit, QFrame, QWidget, QSizePolicy, QApplication, QScrollArea
 )
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QPoint
 from PySide6.QtGui import QPixmap, QFont, QColor, QPainter, QLinearGradient, QBrush, QKeySequence, QShortcut, QAction
@@ -16,14 +16,14 @@ except ImportError:
 from core.auth import AuthSession
 from ui.styles.theme import ThemeManager
 import config
+from ui.components.responsive import fit_dialog_to_screen, refit_after_show
 
 
 class LoginWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(config.APP_NAME)
-        self.setMinimumSize(420, 540)
-        self.resize(520, 640)
+        fit_dialog_to_screen(self, 520, 640, minimum_width=360, minimum_height=420)
         self.setModal(True)
         self._drag_pos = None
         self._is_maximized = config.load_prefs().get("login_maximized", True)
@@ -198,7 +198,17 @@ class LoginWindow(QDialog):
         card_layout.addWidget(self.footer_lbl)
 
         outer_layout.addWidget(self.card)
-        root.addWidget(self.outer, 1)
+        self.login_scroll = QScrollArea()
+        self.login_scroll.setWidgetResizable(True)
+        self.login_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.login_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.login_scroll.setWidget(self.outer)
+        root.addWidget(self.login_scroll, 1)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._is_maximized:
+            refit_after_show(self, 520, 640, minimum_width=360, minimum_height=420)
 
     def _apply_theme(self):
         T = ThemeManager.tokens()

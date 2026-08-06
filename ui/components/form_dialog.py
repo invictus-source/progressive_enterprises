@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QScreen
+from ui.components.responsive import fit_dialog_to_screen, refit_after_show
 
 
 class FormDialog(QDialog):
@@ -16,25 +17,15 @@ class FormDialog(QDialog):
         self._preferred_width = width
         self._preferred_height = height if height and height > 0 else 0
         self._result_data = None
+        self._first_show = True
         self._build_chrome(title, subtitle)
         self._adjust_size()
         
     def _adjust_size(self):
-        screen = QApplication.primaryScreen()
-        if screen:
-            available = screen.availableGeometry()
-            max_width = int(available.width() * 0.92)
-            max_height = int(available.height() * 0.88)
-            
-            dialog_width = min(self._preferred_width, max_width)
-            self.setMinimumWidth(min(360, dialog_width))
-            self.setMaximumWidth(max_width)
-            
-            if self._preferred_height:
-                dialog_height = min(self._preferred_height, max_height)
-                self.setMaximumHeight(max_height)
-            else:
-                self.setMaximumHeight(max_height)
+        fit_dialog_to_screen(
+            self, self._preferred_width, self._preferred_height or 620,
+            minimum_width=360, minimum_height=300,
+        )
 
     def _build_chrome(self, title: str, subtitle: str):
         root = QVBoxLayout(self)
@@ -93,12 +84,12 @@ class FormDialog(QDialog):
         sep.setFrameShape(QFrame.Shape.HLine)
         root.addWidget(sep)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setStyleSheet("QScrollArea { background: transparent; }")
 
         body_wrapper = QWidget()
         body_wrapper.setObjectName("DialogBody")
@@ -106,8 +97,8 @@ class FormDialog(QDialog):
         self.body_layout.setContentsMargins(14, 12, 14, 12)
         self.body_layout.setSpacing(8)
 
-        scroll.setWidget(body_wrapper)
-        root.addWidget(scroll, 1)
+        self.scroll.setWidget(body_wrapper)
+        root.addWidget(self.scroll, 1)
 
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.Shape.HLine)
@@ -128,6 +119,7 @@ class FormDialog(QDialog):
         self.save_btn.setObjectName("PrimaryBtn")
         self.save_btn.setMinimumHeight(32)
         self.save_btn.setMinimumWidth(80)
+        self.save_btn.setDefault(True)
         self.save_btn.clicked.connect(self._on_save)
 
         f_layout.addWidget(self.cancel_btn)
@@ -143,7 +135,7 @@ class FormDialog(QDialog):
 
     def add_field(self, label: str, widget, hint: str = ""):
         lbl = QLabel(label)
-        lbl.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: bold;")
+        lbl.setObjectName("FieldLabel")
         self.body_layout.addWidget(lbl)
         
         if isinstance(widget, (QLineEdit, QComboBox, QTextEdit)):
@@ -152,7 +144,7 @@ class FormDialog(QDialog):
         self.body_layout.addWidget(widget)
         if hint:
             h = QLabel(hint)
-            h.setStyleSheet("color: #6e7681; font-size: 10px;")
+            h.setObjectName("HintText")
             self.body_layout.addWidget(h)
 
     def add_row(self, *widgets):
@@ -162,6 +154,22 @@ class FormDialog(QDialog):
             row.addWidget(w, 1)
         self.body_layout.addLayout(row)
 
+    def add_field_row(self, *fields):
+        """Add equally sized fields with labels above them to prevent label clipping."""
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        for label_text, widget in fields:
+            container = QWidget()
+            column = QVBoxLayout(container)
+            column.setContentsMargins(0, 0, 0, 0)
+            column.setSpacing(4)
+            label = QLabel(label_text)
+            label.setObjectName("FieldLabel")
+            column.addWidget(label)
+            column.addWidget(widget)
+            row.addWidget(container, 1)
+        self.body_layout.addLayout(row)
+
     def add_separator(self):
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -169,7 +177,7 @@ class FormDialog(QDialog):
 
     def add_section(self, title: str):
         lbl = QLabel(title)
-        lbl.setStyleSheet("font-size: 12px; font-weight: bold; color: #60a5fa; padding-top: 6px;")
+        lbl.setObjectName("SectionTitle")
         self.body_layout.addWidget(lbl)
 
     def finalize(self):
@@ -184,6 +192,25 @@ class FormDialog(QDialog):
                 self.accept()
         except ValidationError as e:
             self._show_error(str(e))
+            self.scroll.verticalScrollBar().setValue(0)
+        except Exception as e:
+            self._show_error(f"Please check the form: {e}")
+            self.scroll.verticalScrollBar().setValue(0)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        refit_after_show(
+            self, self._preferred_width, self._preferred_height or 620,
+            minimum_width=360, minimum_height=300,
+        )
+        if self._first_show:
+            self._first_show = False
+            QTimer.singleShot(0, self._focus_first_field)
+
+    def _focus_first_field(self):
+        field = self.findChild(QLineEdit)
+        if field and field.isEnabled():
+            field.setFocus()
 
     def _collect(self) -> dict | None:
         return {}

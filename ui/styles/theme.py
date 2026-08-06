@@ -239,6 +239,9 @@ QPushButton#NavBtn[active="true"] {{
     font-size: 18px; font-weight: 700;
     color: {T['text_primary']}; background: transparent;
 }}
+#PageSubtitle {{
+    font-size: 11px; color: {T['text_muted']}; background: transparent;
+}}
 
 /* ── Cards ────────────────────────────────────────────────── */
 #Card {{
@@ -383,7 +386,7 @@ QPushButton#CloseBtn {{
 QPushButton#CloseBtn:hover {{ background: {T['danger']}; color: #FFF; }}
 
 /* ── Inputs ───────────────────────────────────────────────── */
-QLineEdit, QTextEdit, QPlainTextEdit {{
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox {{
     background-color: {T['bg_input']};
     border: 1.5px solid {T['border_strong']};
     border-radius: 9px; padding: 9px 13px;
@@ -391,12 +394,25 @@ QLineEdit, QTextEdit, QPlainTextEdit {{
     selection-background-color: {a};
     selection-color: #FFF;
 }}
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {{
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus,
+QSpinBox:focus, QDoubleSpinBox:focus {{
     border-color: {a};
 }}
-QLineEdit:disabled {{
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {{
     background-color: {T['bg_elevated']};
     color: {T['text_muted']}; border-color: {T['border']};
+}}
+QSpinBox::up-button, QDoubleSpinBox::up-button,
+QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    width: 18px; border: none; background: {T['bg_elevated']};
+}}
+QSpinBox::up-button, QDoubleSpinBox::up-button {{
+    subcontrol-origin: border; subcontrol-position: top right;
+    border-radius: 0 8px 0 0;
+}}
+QSpinBox::down-button, QDoubleSpinBox::down-button {{
+    subcontrol-origin: border; subcontrol-position: bottom right;
+    border-radius: 0 0 8px 0;
 }}
 
 /* ── Updated ComboBox ─────────────────────────────────────── */
@@ -475,6 +491,7 @@ QTableWidget::item:selected {{
     background-color: {sel};
     color: {T['text_primary']};
 }}
+QTableWidget:focus {{ border-color: {a}; }}
 QHeaderView::section {{
     background-color: {T['bg_elevated']};
     color: {T['text_muted']};
@@ -700,7 +717,7 @@ QProgressBar {{
     text-align: center; color: transparent;
 }}
 QProgressBar::chunk {{
-    background: qlineargradient(x1:0,y1:0,x2:1,y2=0,
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 {a}, stop:1 {ah});
     border-radius: 6px;
 }}
@@ -712,7 +729,7 @@ QProgressBar::chunk {{
     border-radius: 20px;
 }}
 #WizardStep {{
-    background: qlineargradient(x1:0,y1:0,x2:0,y2=1,
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
         stop:0 {'#0D1B2A' if dk else '#F0F4F8'},
         stop:1 {'#1B2838' if dk else '#FFFFFF'});
     border-right: 1px solid {T['border']};

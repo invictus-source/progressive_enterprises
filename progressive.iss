@@ -1,16 +1,42 @@
+#define MyAppName "Progressive Enterprises"
+#define MyAppPublisher "Progressive Enterprises"
+#define MyAppExeName "Progressive Enterprises.exe"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
+
 [Setup]
-AppName=Progressive Enterprises
-AppVersion=1.0.0
-AppPublisher=Progressive Enterprises
-AppUpdatesURL=http://localhost
-DefaultDirName={autopf}\ProgressiveEnterprises
+AppId={{A106F3DF-7D04-4C85-AD60-D284A0F83C5C}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL=https://github.com/invictus-source/progressive_enterprises
+AppSupportURL=https://github.com/invictus-source/progressive_enterprises/issues
+DefaultDirName={localappdata}\Programs\{#MyAppName}
+DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0
 OutputDir=installers
-OutputBaseFilename=ProgressiveSetup_v1.0.0
+OutputBaseFilename=ProgressiveEnterprises_Setup_{#MyAppVersion}_x64
 SetupIconFile=assets\logo.ico
-Compression=lzma
+UninstallDisplayIcon={app}\assets\logo.ico
+Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+CloseApplications=yes
+RestartApplications=no
+UsePreviousAppDir=yes
+SetupLogging=yes
+VersionInfoVersion={#MyAppVersion}.0
+VersionInfoProductVersion={#MyAppVersion}.0
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} Windows Installer
+VersionInfoProductName={#MyAppName}
+InfoBeforeFile=packaging\DATA_SAFETY.txt
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -20,17 +46,13 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\Progressive Enterprises\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "dist\Progressive Enterprises\_internal\PySide6\plugins\styles\*";           DestDir: "{app}\_internal\PySide6\plugins\styles";           Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "dist\Progressive Enterprises\_internal\PySide6\plugins\platforms\*";        DestDir: "{app}\_internal\PySide6\plugins\platforms";        Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "dist\Progressive Enterprises\_internal\PySide6\plugins\imageformats\*";     DestDir: "{app}\_internal\PySide6\plugins\imageformats";     Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "dist\Progressive Enterprises\_internal\PySide6\plugins\iconengines\*";      DestDir: "{app}\_internal\PySide6\plugins\iconengines";      Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "dist\Progressive Enterprises\_internal\PySide6\plugins\tls\*";              DestDir: "{app}\_internal\PySide6\plugins\tls";              Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
-Source: "dist\Progressive Enterprises\qt.conf"; DestDir: "{app}"; Flags: ignoreversion
-Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\Progressive Enterprises"; Filename: "{app}\Progressive Enterprises.exe"; IconFilename: "{app}\assets\logo.ico"
-Name: "{autodesktop}\Progressive Enterprises"; Filename: "{app}\Progressive Enterprises.exe"; IconFilename: "{app}\assets\logo.ico"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\assets\logo.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\assets\logo.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Progressive Enterprises.exe"; Description: "{cm:LaunchProgram,Progressive Enterprises}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+; Deliberately no data-deletion section. Application data lives outside {app}
+; and must survive upgrades, reinstalls and uninstall operations.

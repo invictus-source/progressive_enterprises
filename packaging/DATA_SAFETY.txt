@@ -1,0 +1,11 @@
+YOUR BUSINESS DATA IS KEPT SAFE
+
+On a new computer, Progressive Enterprises creates a new data folder and starts
+the company setup when the app is opened for the first time.
+
+When upgrading, reinstalling, or uninstalling the application, existing business
+data is not deleted. This includes the database, invoices, exports, company
+settings, preferences, and backups stored in your Windows AppData folder.
+
+Removing business data is a separate manual action and is never performed by
+this installer.

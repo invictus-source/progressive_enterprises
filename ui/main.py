@@ -30,9 +30,9 @@ class MainWindow(QMainWindow):
         ThemeManager.load_from_prefs()
         ThemeManager.apply_to_app()
 
-        saved_scale = prefs.get("font_scale", 10)
+        saved_scale = config.normalize_font_size(prefs.get("font_scale", 10))
         font = QApplication.font()
-        font.setPointSize(int(saved_scale) if isinstance(saved_scale, (int, float)) else 10)
+        font.setPointSize(saved_scale)
         QApplication.setFont(font)
 
         self._pages: dict[str, QWidget] = {}
@@ -50,11 +50,14 @@ class MainWindow(QMainWindow):
         screen = QApplication.primaryScreen()
         if screen:
             available = screen.availableGeometry()
-            self._min_width  = max(800, int(available.width()  * 0.80))
-            self._min_height = max(500, int(available.height() * 0.80))
+            # A minimum must stay small on large/4K monitors; using a percentage
+            # here previously made the window impossible to resize normally.
+            self._min_width = min(760, available.width())
+            self._min_height = min(480, available.height())
+            self.resize(int(available.width() * 0.9), int(available.height() * 0.9))
         else:
-            self._min_width  = 1024
-            self._min_height = 600
+            self._min_width = 760
+            self._min_height = 480
         self.setMinimumSize(self._min_width, self._min_height)
 
     def _setup_ui(self):
@@ -191,6 +194,8 @@ class MainWindow(QMainWindow):
                 
                 if key == "sales_history":
                     page.modify_sale_requested.connect(self._handle_modify_sale)
+                if key == "dashboard":
+                    page.navigate_requested.connect(self._navigate)
                     
             except Exception as e:
                 placeholder = self._make_placeholder(key, str(e))
@@ -251,7 +256,7 @@ class MainWindow(QMainWindow):
             self.sidebar.set_collapsed(True)
         else:
             self.sidebar.set_collapsed(False)
-        if width < 768:
+        if width < 1100:
             self.menu_toggle.show()
         else:
             self.menu_toggle.hide()
@@ -308,8 +313,7 @@ class MainWindow(QMainWindow):
         if user:
             bar.showMessage(
                 f"  {config.COMPANY_NAME}  ·  "
-                f"Signed in as {user.full_name} ({user.role.capitalize()})  ·  "
-                f"Data: {config.DATA_DIR}"
+                f"Signed in as {user.full_name} ({user.role.capitalize()})"
             )
 
     def closeEvent(self, event: QCloseEvent):

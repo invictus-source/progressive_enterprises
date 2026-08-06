@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QTextEdit, QScrollArea,
-    QDialog, QMessageBox, QFrame, QInputDialog
+    QDialog, QMessageBox, QFrame, QInputDialog, QCheckBox, QSpinBox
 )
 from PySide6.QtCore import Qt
 
@@ -9,7 +9,8 @@ from ui.components.data_table import DataTable
 from ui.components.form_dialog import FormDialog, ValidationError
 from ui.components.toast import show_toast, show_success, show_warning, show_error
 from db.manager import get_db
-from db.models import Product, Category
+from db.models import Product, Category, StockMovement
+from core.auth import AuthSession
 import config
 
 
@@ -59,57 +60,51 @@ class AddEditProductDialog(FormDialog):
         self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("Product Name *")
         self.add_field("Product Name *", self.name_edit)
 
-        row1 = QHBoxLayout()
         self.brand_edit = QLineEdit(); self.brand_edit.setPlaceholderText("Brand (e.g. Samsung)")
         self.model_edit = QLineEdit(); self.model_edit.setPlaceholderText("Model No.")
-        row1.addWidget(QLabel("Brand")); row1.addWidget(self.brand_edit)
-        row1.addWidget(QLabel("Model")); row1.addWidget(self.model_edit)
-        self.body_layout.addLayout(row1)
+        self.add_field_row(("Brand", self.brand_edit), ("Model", self.model_edit))
 
-        row_sn = QHBoxLayout()
-        self.serial_edit = QLineEdit(); self.serial_edit.setPlaceholderText("Serial Number (optional)")
         self.barcode_edit = QLineEdit(); self.barcode_edit.setPlaceholderText("Barcode / SKU")
-        row_sn.addWidget(QLabel("Serial No.")); row_sn.addWidget(self.serial_edit)
-        row_sn.addWidget(QLabel("Barcode")); row_sn.addWidget(self.barcode_edit)
-        self.body_layout.addLayout(row_sn)
+        self.track_serials_check = QCheckBox("Track one serial / IMEI per physical unit")
+        self.add_field_row(("Barcode / SKU", self.barcode_edit), ("Serial Tracking", self.track_serials_check))
 
-        row2 = QHBoxLayout()
         self.category_combo = QComboBox()
         self._load_categories()
-        row2.addWidget(QLabel("Category")); row2.addWidget(self.category_combo)
-        self.body_layout.addLayout(row2)
+        self.add_field("Category", self.category_combo)
 
         self.add_section("Pricing & Tax")
-        row3 = QHBoxLayout()
         self.purchase_price_edit = QLineEdit()
         self.purchase_price_edit.setPlaceholderText("0.00")
         self.selling_price_edit = QLineEdit()
         self.selling_price_edit.setPlaceholderText("0.00")
-        row3.addWidget(QLabel("Purchase Price (₹)")); row3.addWidget(self.purchase_price_edit)
-        row3.addWidget(QLabel("Selling Price (₹)")); row3.addWidget(self.selling_price_edit)
-        self.body_layout.addLayout(row3)
+        self.add_field_row(
+            ("Purchase Price before GST (₹)", self.purchase_price_edit),
+            ("Selling Price before GST (₹)", self.selling_price_edit),
+        )
 
-        row4 = QHBoxLayout()
         self.gst_combo = QComboBox()
         self.gst_combo.addItems([f"{r}%" for r in config.GST_SLABS])
         self.gst_combo.setCurrentText("18%")
         self.hsn_edit = QLineEdit(); self.hsn_edit.setPlaceholderText("HSN Code")
-        row4.addWidget(QLabel("GST Rate")); row4.addWidget(self.gst_combo)
-        row4.addWidget(QLabel("HSN Code")); row4.addWidget(self.hsn_edit)
-        self.body_layout.addLayout(row4)
+        self.add_field_row(("GST Rate", self.gst_combo), ("HSN Code", self.hsn_edit))
 
         self.add_section("Stock")
-        row5 = QHBoxLayout()
         self.stock_edit = QLineEdit()
         self.stock_edit.setPlaceholderText("0")
         self.min_stock_edit = QLineEdit()
         self.min_stock_edit.setPlaceholderText("2")
         self.min_stock_edit.setText("2")
         self.unit_edit = QLineEdit(); self.unit_edit.setText("Pcs"); self.unit_edit.setFixedWidth(80)
-        row5.addWidget(QLabel("Opening Stock")); row5.addWidget(self.stock_edit)
-        row5.addWidget(QLabel("Min Alert")); row5.addWidget(self.min_stock_edit)
-        row5.addWidget(QLabel("Unit")); row5.addWidget(self.unit_edit)
-        self.body_layout.addLayout(row5)
+        self.add_field_row(
+            ("Opening Stock", self.stock_edit),
+            ("Min Alert", self.min_stock_edit),
+            ("Unit", self.unit_edit),
+        )
+
+        self.warranty_spin = QSpinBox()
+        self.warranty_spin.setRange(0, 120)
+        self.warranty_spin.setSuffix(" months")
+        self.add_field("Default Warranty", self.warranty_spin)
 
         self.add_section("Notes")
         self.desc_edit = QTextEdit(); self.desc_edit.setFixedHeight(55)
@@ -131,13 +126,16 @@ class AddEditProductDialog(FormDialog):
         self.name_edit.setText(p.name or "")
         self.brand_edit.setText(p.brand or "")
         self.model_edit.setText(p.model_no or "")
-        self.serial_edit.setText(p.serial_number or "")
         self.barcode_edit.setText(p.barcode or "")
+        self.track_serials_check.setChecked(bool(p.track_serials))
+        self.warranty_spin.setValue(int(p.warranty_months or 0))
         self.purchase_price_edit.setText(str(p.purchase_price or 0))
         self.selling_price_edit.setText(str(p.selling_price or 0))
         self.gst_combo.setCurrentText(f"{int(p.gst_rate)}%")
         self.hsn_edit.setText(p.hsn_code or "")
         self.stock_edit.setText(str(p.stock_qty or 0))
+        self.stock_edit.setEnabled(False)
+        self.stock_edit.setToolTip("Use Adjust Stock or Purchases / GRN to change current stock.")
         self.min_stock_edit.setText(str(p.min_stock or 2))
         self.unit_edit.setText(p.unit or "Pcs")
         self.desc_edit.setPlainText(p.description or "")
@@ -155,12 +153,18 @@ class AddEditProductDialog(FormDialog):
         selling_price = _parse_price(self.selling_price_edit.text(), "Selling Price")
         stock_qty = _parse_stock(self.stock_edit.text(), "Opening Stock", default=0)
         min_stock = _parse_stock(self.min_stock_edit.text(), "Min Alert", default=2)
+        if not self._product and self.track_serials_check.isChecked() and stock_qty > 0:
+            raise ValidationError(
+                "Opening stock must be 0 for a serial-tracked product. "
+                "Use Purchases / GRN to receive each unit with its serial number."
+            )
         return {
             "name": name,
             "brand": self.brand_edit.text().strip() or None,
             "model_no": self.model_edit.text().strip() or None,
-            "serial_number": self.serial_edit.text().strip() or None,
             "barcode": self.barcode_edit.text().strip() or None,
+            "track_serials": self.track_serials_check.isChecked(),
+            "warranty_months": self.warranty_spin.value(),
             "category_id": self.category_combo.currentData(),
             "hsn_code": self.hsn_edit.text().strip() or None,
             "gst_rate": gst_rate,
@@ -209,13 +213,13 @@ class InventoryPage(QWidget):
         layout.addWidget(self.summary_bar)
 
         self.table = DataTable(
-            columns=["#", "Name", "Brand", "Category", "Stock", "Min", "Purchase ₹", "Selling ₹", "GST%"],
+            columns=["#", "Name", "Brand / Model", "Category", "Stock", "Tracking", "Purchase ₹", "Selling ₹", "GST%"],
             searchable=True,
             actions=[
                 ("➕  Add Product",   self._add),
                 ("✏️  Edit",           self._edit),
                 ("📥  Adjust Stock",  self._adjust_stock),
-                ("🗑  Deactivate",    self._deactivate),
+                ("⏸  Deactivate",    self._deactivate),
             ],
         )
         self.table.row_double_clicked.connect(self._edit)
@@ -250,9 +254,9 @@ class InventoryPage(QWidget):
             for i, p in enumerate(self._products, 1):
                 stock_str = str(p.stock_qty)
                 rows.append([
-                    str(i), p.name, p.brand or "—",
+                    str(i), p.name, " / ".join(x for x in [p.brand, p.model_no] if x) or "—",
                     p.category.name if p.category else "—",
-                    stock_str, str(p.min_stock),
+                    stock_str, "Serial" if p.track_serials else "Quantity",
                     f"₹{p.purchase_price:,.0f}", f"₹{p.selling_price:,.0f}",
                     f"{int(p.gst_rate)}%",
                 ])
@@ -323,6 +327,13 @@ class InventoryPage(QWidget):
         product = self._selected()
         if not product:
             return
+        if product.track_serials:
+            show_warning(
+                self,
+                "This product is serial-tracked. Use Purchases / GRN to add stock "
+                "so every physical unit has a serial number.",
+            )
+            return
         val, ok = QInputDialog.getInt(
             self, "Adjust Stock",
             f"Enter adjustment for '{product.name}'\n(positive=add, negative=reduce):",
@@ -333,6 +344,16 @@ class InventoryPage(QWidget):
             try:
                 p = session.query(Product).get(product.id)
                 p.stock_qty += val
+                user = AuthSession.current_user()
+                session.add(StockMovement(
+                    product_id=p.id,
+                    movement_type="Adjustment",
+                    quantity=val,
+                    resulting_stock=p.stock_qty,
+                    reference_type="Manual",
+                    notes="Manual stock adjustment from Inventory",
+                    created_by=user.id if user else None,
+                ))
                 session.commit()
                 self.refresh()
                 show_success(self, f"Stock adjusted. New stock: {p.stock_qty}")

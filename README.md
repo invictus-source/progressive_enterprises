@@ -228,27 +228,39 @@ The app ships with a **dark mode** theme built in QSS (Qt Style Sheets):
 
 ---
 
-## Building the Windows Installer
+## Building the Windows Installer from Linux
 
-### Prerequisites
+PyInstaller is not a cross-compiler, so a Windows executable must be produced on
+Windows. Linux is the normal development environment; the included GitHub Actions
+workflow supplies the Windows build machine.
 
-- Python 3.12+ with the virtual environment at `.venv`
-- [Inno Setup 6](https://jrsoftware.org/isdl.php) installed
+1. Push the source to GitHub.
+2. Open **Actions → Build Windows Installer**.
+3. Select **Run workflow**, enter a `MAJOR.MINOR.PATCH` version, and start it.
+4. Download `ProgressiveEnterprises-Windows-<version>` from the completed run.
 
-### Build
+The artifact contains:
+
+- `ProgressiveEnterprises_Setup_<version>_x64.exe`
+- A matching SHA-256 checksum file
+
+The workflow runs the automated tests, creates a 64-bit PyInstaller bundle on
+Windows, runs the packaged app against a disposable test database, compiles the
+Inno Setup installer, and uploads the result.
+
+On a Windows development machine the same build can be run directly:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File build_installer.ps1
+.\build_installer.ps1 -Version 1.0.0
 ```
 
-This script:
-1. Runs PyInstaller via the spec file to create the `dist/` bundle
-2. Writes `qt.conf` next to the exe for Qt plugin discovery
-3. Verifies critical Qt plugin DLLs are present
-4. Installs Inno Setup via `winget` if missing
-5. Compiles the installer exe using `progressive.iss`
+### Installer data safety
 
-The final installer lands at `installers/ProgressiveSetup_v1.0.0.exe`.
+- A clean computer starts the setup wizard and creates a new database on first run.
+- Upgrades and reinstalls reuse the same application identity and preserve data.
+- Uninstall removes application files but intentionally keeps business data.
+- `.env`, database, settings, preference, invoice, export and backup files are
+  never embedded in the installer.
 
 ---
 
@@ -263,7 +275,10 @@ The final installer lands at `installers/ProgressiveSetup_v1.0.0.exe`.
 | `DATA_DIR/settings.json` | Company info and setup state |
 | `DATA_DIR/prefs.json` | Theme and UI preferences |
 
-The data directory is created automatically on first run. Backing up `progressive.db` is sufficient to preserve all business data.
+On Windows the default data directory is
+`%APPDATA%\ProgressiveEnterprises\data`. It is created automatically on first
+run and is outside the application installation directory. Backing up the entire
+data directory preserves the database, documents, settings and backups.
 
 ---
 

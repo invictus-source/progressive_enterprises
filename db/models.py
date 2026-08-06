@@ -101,6 +101,8 @@ class Product(Base):
     stock_qty = Column(Integer, default=0)
     min_stock = Column(Integer, default=2)
     unit = Column(String(16), default="Pcs")
+    track_serials = Column(Boolean, default=False)
+    warranty_months = Column(Integer, default=0)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
@@ -109,6 +111,8 @@ class Product(Base):
     category = relationship("Category", back_populates="products")
     sale_items = relationship("SaleItem", back_populates="product")
     purchase_items = relationship("PurchaseItem", back_populates="product")
+    inventory_units = relationship("InventoryUnit", back_populates="product")
+    stock_movements = relationship("StockMovement", back_populates="product")
 
     def __repr__(self):
         return f"<Product {self.name}>"
@@ -129,7 +133,7 @@ class Sale(Base):
     igst_amount = Column(Float, default=0.0)
     total_gst = Column(Float, default=0.0)
     grand_total = Column(Float, default=0.0)
-    payment_mode = Column(Enum("Cash", "Card", "UPI", "EMI", "Mixed", name="payment_mode"), default="Cash")
+    payment_mode = Column(Enum("Cash", "Card", "UPI", "Credit", "EMI", "Mixed", name="payment_mode"), default="Cash")
     amount_received = Column(Float, default=0.0)
     balance_due = Column(Float, default=0.0)
     notes = Column(Text, nullable=True)
@@ -172,6 +176,11 @@ class Purchase(Base):
     bill_no = Column(String(64), nullable=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True)
     purchase_date = Column(DateTime, default=datetime.now)
+    invoice_date = Column(Date, nullable=True)
+    received_date = Column(Date, nullable=True)
+    place_of_supply = Column(String(64), nullable=True)
+    tax_treatment = Column(String(16), nullable=True)
+    status = Column(String(16), default="Posted")
     subtotal = Column(Float, default=0.0)
     discount_amount = Column(Float, default=0.0)
     taxable_amount = Column(Float, default=0.0)
@@ -180,6 +189,7 @@ class Purchase(Base):
     igst_amount = Column(Float, default=0.0)
     total_gst = Column(Float, default=0.0)
     grand_total = Column(Float, default=0.0)
+    round_off = Column(Float, default=0.0)
     payment_mode = Column(String(32), default="Cash")
     amount_paid = Column(Float, default=0.0)
     balance_due = Column(Float, default=0.0)
@@ -203,6 +213,11 @@ class PurchaseItem(Base):
     product_name = Column(String(128), nullable=False)
     qty = Column(Integer, nullable=False, default=1)
     unit_price = Column(Float, nullable=False)
+    invoice_rate = Column(Float, default=0.0)
+    is_tax_inclusive = Column(Boolean, default=True)
+    discount_pct = Column(Float, default=0.0)
+    discount_amount = Column(Float, default=0.0)
+    hsn_code = Column(String(16), nullable=True)
     gst_rate = Column(Float, default=18.0)
     taxable_amount = Column(Float, default=0.0)
     gst_amount = Column(Float, default=0.0)
@@ -210,6 +225,44 @@ class PurchaseItem(Base):
 
     purchase = relationship("Purchase", back_populates="items")
     product = relationship("Product", back_populates="purchase_items")
+    inventory_units = relationship("InventoryUnit", back_populates="purchase_item", cascade="all, delete-orphan")
+
+
+class InventoryUnit(Base):
+    """A traceable physical unit received against a purchase line."""
+    __tablename__ = "inventory_units"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    purchase_item_id = Column(Integer, ForeignKey("purchase_items.id"), nullable=True)
+    sale_item_id = Column(Integer, ForeignKey("sale_items.id"), nullable=True)
+    serial_number = Column(String(128), nullable=False, unique=True)
+    status = Column(String(20), default="In Stock")
+    received_at = Column(DateTime, default=datetime.now)
+    sold_at = Column(DateTime, nullable=True)
+    warranty_expiry = Column(Date, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    product = relationship("Product", back_populates="inventory_units")
+    purchase_item = relationship("PurchaseItem", back_populates="inventory_units")
+
+
+class StockMovement(Base):
+    """Append-only stock ledger used to explain every quantity change."""
+    __tablename__ = "stock_movements"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    movement_type = Column(String(24), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    resulting_stock = Column(Integer, nullable=False)
+    reference_type = Column(String(24), nullable=True)
+    reference_id = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    product = relationship("Product", back_populates="stock_movements")
 
 
 class FinanceProvider(Base):

@@ -45,7 +45,15 @@ class MigrationSystem:
             columns[col.name] = {
                 'type': str(col.type),
                 'nullable': col.nullable,
-                'default': str(col.default) if col.default else None,
+                # Keep only scalar defaults that SQLite can safely embed in an
+                # ALTER TABLE statement. Callable defaults (datetime.now, etc.)
+                # continue to be supplied by SQLAlchemy on future inserts.
+                'default': (
+                    col.default.arg
+                    if col.default is not None
+                    and getattr(col.default, 'is_scalar', False)
+                    else None
+                ),
                 'primary_key': col.primary_key,
             }
         return columns
@@ -206,7 +214,16 @@ class MigrationSystem:
         try:
             sql_type = self._get_sql_type(column_info)
             nullable = "" if column_info.get('nullable', True) else " NOT NULL"
-            default = f" DEFAULT {column_info['default']}" if column_info.get('default') else ""
+            default_value = column_info.get('default')
+            if isinstance(default_value, bool):
+                default = f" DEFAULT {1 if default_value else 0}"
+            elif isinstance(default_value, (int, float)):
+                default = f" DEFAULT {default_value}"
+            elif isinstance(default_value, str):
+                escaped = default_value.replace("'", "''")
+                default = f" DEFAULT '{escaped}'"
+            else:
+                default = ""
             
             sql = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {sql_type}{nullable}{default}"
             conn.execute(text(sql))

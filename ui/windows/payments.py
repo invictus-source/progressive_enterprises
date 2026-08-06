@@ -28,8 +28,9 @@ def _parse_amount(text: str) -> float:
 
 class AddPaymentDialog(FormDialog):
     def __init__(self, payment_type: str = "receipt", parent=None):
-        title = "Record Receipt" if payment_type == "receipt" else "Record Payment to Vendor"
-        super().__init__(title, width=460, parent=parent)
+        title = "Money Received from Customer" if payment_type == "receipt" else "Payment Made to Vendor"
+        subtitle = "Record who paid, how much, and the payment method."
+        super().__init__(title, subtitle, width=500, height=600, parent=parent)
         self._type = payment_type
         self._customers = []
         self._vendors = []
@@ -38,12 +39,11 @@ class AddPaymentDialog(FormDialog):
 
     def _build_fields(self):
         if self._type == "receipt":
-            self.add_field("Customer", QLabel("Loading..."))
             self._cust_combo = QComboBox()
-            self.body_layout.addWidget(self._cust_combo)
+            self.add_field("Customer *", self._cust_combo)
         else:
             self._vend_combo = QComboBox()
-            self.add_field("Vendor", self._vend_combo)
+            self.add_field("Vendor *", self._vend_combo)
 
         self.amount_edit = QLineEdit()
         self.amount_edit.setPlaceholderText("Amount in ₹ (e.g. 5000)")
@@ -69,11 +69,12 @@ class AddPaymentDialog(FormDialog):
         try:
             if self._type == "receipt":
                 self._customers = session.query(Customer).filter_by(is_active=True).all()
+                self._cust_combo.addItem("— Select customer —", None)
                 for c in self._customers:
                     self._cust_combo.addItem(f"{c.name} – {c.phone}", c.id)
             else:
                 self._vendors = session.query(Vendor).filter_by(is_active=True).all()
-                self._vend_combo.addItem("— Select Vendor —", None)
+                self._vend_combo.addItem("— Select vendor —", None)
                 for v in self._vendors:
                     self._vend_combo.addItem(v.name, v.id)
         finally:
@@ -86,13 +87,19 @@ class AddPaymentDialog(FormDialog):
             "amount": amount,
             "mode": self.mode_combo.currentText(),
             "reference_no": self.ref_edit.text().strip() or None,
-            "payment_date": self.date_edit.date().toPython(),
+            "payment_date": datetime.combine(
+                self.date_edit.date().toPython(), datetime.now().time()
+            ),
             "notes": self.notes_edit.toPlainText().strip() or None,
         }
         if self._type == "receipt":
             data["customer_id"] = getattr(self, "_cust_combo", None) and self._cust_combo.currentData()
+            if not data["customer_id"]:
+                raise ValidationError("Please select the customer who paid you.")
         else:
             data["vendor_id"] = self._vend_combo.currentData()
+            if not data["vendor_id"]:
+                raise ValidationError("Please select the vendor you paid.")
         return data
 
 class PaymentsPage(QWidget):
@@ -184,7 +191,7 @@ class PaymentsPage(QWidget):
             p = Payment(**data, created_by=user.id if user else None)
             session.add(p); session.commit()
             self.refresh()
-            QMessageBox.information(self, "Success", "Payment recorded.")
+            QMessageBox.information(self, "Saved", "The payment was recorded successfully.")
         except Exception as e:
             session.rollback()
             QMessageBox.critical(self, "Error", str(e))

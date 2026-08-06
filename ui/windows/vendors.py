@@ -9,12 +9,13 @@ from ui.components.data_table import DataTable
 from ui.components.form_dialog import FormDialog, ValidationError
 from db.manager import get_db
 from db.models import Vendor, Purchase, Payment
+from ui.components.responsive import fit_dialog_to_screen
 
 
 class AddEditVendorDialog(FormDialog):
     def __init__(self, vendor: Vendor = None, parent=None):
         mode = "Edit Vendor" if vendor else "Add New Vendor"
-        super().__init__(mode, "Fill in the vendor / supplier details", width=560, parent=parent)
+        super().__init__(mode, "Enter the business and contact details shown on vendor bills.", width=580, height=680, parent=parent)
         self._vendor = vendor
         self._build_fields()
         if vendor:
@@ -23,15 +24,12 @@ class AddEditVendorDialog(FormDialog):
 
     def _build_fields(self):
         self.add_section("Business Information")
-        self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("Vendor / Company Name")
+        self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("Vendor or company name")
         self.add_field("Name *", self.name_edit)
 
-        row1 = QHBoxLayout()
         self.phone_edit = QLineEdit(); self.phone_edit.setPlaceholderText("Primary Phone")
         self.alt_phone_edit = QLineEdit(); self.alt_phone_edit.setPlaceholderText("Alternate Phone")
-        row1.addWidget(QLabel("Phone *")); row1.addWidget(self.phone_edit)
-        row1.addWidget(QLabel("Alt")); row1.addWidget(self.alt_phone_edit)
-        self.body_layout.addLayout(row1)
+        self.add_field_row(("Phone *", self.phone_edit), ("Alt Phone", self.alt_phone_edit))
 
         self.email_edit = QLineEdit(); self.email_edit.setPlaceholderText("Email")
         self.add_field("Email", self.email_edit)
@@ -51,12 +49,9 @@ class AddEditVendorDialog(FormDialog):
         self.bank_name_edit = QLineEdit(); self.bank_name_edit.setPlaceholderText("Bank Name")
         self.add_field("Bank Name", self.bank_name_edit)
 
-        bank_row = QHBoxLayout()
         self.bank_acc_edit = QLineEdit(); self.bank_acc_edit.setPlaceholderText("Account Number")
         self.bank_ifsc_edit = QLineEdit(); self.bank_ifsc_edit.setPlaceholderText("IFSC Code")
-        bank_row.addWidget(QLabel("Account")); bank_row.addWidget(self.bank_acc_edit)
-        bank_row.addWidget(QLabel("IFSC")); bank_row.addWidget(self.bank_ifsc_edit)
-        self.body_layout.addLayout(bank_row)
+        self.add_field_row(("Account", self.bank_acc_edit), ("IFSC", self.bank_ifsc_edit))
 
         self.add_section("Notes")
         self.notes_edit = QTextEdit(); self.notes_edit.setFixedHeight(50)
@@ -114,7 +109,7 @@ class VendorsPage(QWidget):
         layout.setSpacing(14)
 
         hdr = QHBoxLayout()
-        title = QLabel("Vendors / Suppliers")
+        title = QLabel("Vendors")
         title.setObjectName("PageTitle")
         hdr.addWidget(title)
         hdr.addStretch()
@@ -127,7 +122,7 @@ class VendorsPage(QWidget):
                 ("➕  Add Vendor", self._add),
                 ("✏️  Edit",        self._edit),
                 ("📋  Purchases",  self._view_purchases),
-                ("🗑  Deactivate", self._deactivate),
+                ("⏸  Deactivate", self._deactivate),
             ],
         )
         self.table.row_double_clicked.connect(self._view_purchases)
@@ -164,7 +159,7 @@ class VendorsPage(QWidget):
                 session.add(v)
                 session.commit()
                 self.refresh()
-                QMessageBox.information(self, "Success", "Vendor added successfully.")
+                QMessageBox.information(self, "Saved", "Vendor added successfully.")
             except Exception as e:
                 session.rollback()
                 QMessageBox.critical(self, "Error", str(e))
@@ -199,10 +194,10 @@ class VendorsPage(QWidget):
             v = session.query(Vendor).get(vendor.id)
             dlg = QDialog(self)
             dlg.setWindowTitle(f"Purchase History – {v.name}")
-            dlg.setMinimumSize(700, 480)
+            fit_dialog_to_screen(dlg, 760, 520, minimum_width=480, minimum_height=340)
             vl = QVBoxLayout(dlg)
-            header = QLabel(f"📋  Purchases from: {v.name}")
-            header.setStyleSheet("font-size: 15px; font-weight: bold; color: #e2e8f0;")
+            header = QLabel(f"Purchases from {v.name}")
+            header.setObjectName("SectionTitle")
             vl.addWidget(header)
             t = QTableWidget()
             t.setColumnCount(6)
@@ -227,7 +222,7 @@ class VendorsPage(QWidget):
         vendor = self._selected()
         if not vendor:
             return
-        reply = QMessageBox.question(self, "Confirm", f"Deactivate vendor '{vendor.name}'?",
+        reply = QMessageBox.question(self, "Deactivate Vendor", f"Deactivate vendor '{vendor.name}'?\n\nExisting bills will remain unchanged.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             session = get_db()

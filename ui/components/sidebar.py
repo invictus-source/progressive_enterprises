@@ -27,7 +27,7 @@ NAV_ITEMS = [
     ("MAIN",        None,                None,                          None),
     (None,          "Dashboard",         "mdi.view-dashboard-outline",  "dashboard"),
     ("SALES",       None,                None,                          None),
-    (None,          "Point of Sale",     "mdi.cart-outline",            "pos"),
+    (None,          "New Sale / Billing", "mdi.cart-outline",           "pos"),
     (None,          "Sales History",     "mdi.receipt",                 "sales_history"),
     (None,          "Customers",         "mdi.account-group-outline",   "customers"),
     ("INVENTORY",   None,                None,                          None),

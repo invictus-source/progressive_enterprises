@@ -2,7 +2,7 @@ import bcrypt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QTextEdit, QStackedWidget, QWidget, QFrame,
-    QSizePolicy, QFileDialog, QMessageBox
+    QSizePolicy, QFileDialog, QMessageBox, QScrollArea
 )
 from PySide6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QPixmap, QFont, QColor
@@ -14,6 +14,8 @@ except ImportError:
     HAS_QTA = False
 
 import config
+from ui.components.responsive import fit_dialog_to_screen, refit_after_show
+from ui.styles.theme import ThemeManager
 
 STEPS = [
     ("🏠", "Welcome",         "Let's get your store set up"),
@@ -27,12 +29,12 @@ class SetupWizard(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Setup – {config.APP_NAME}")
-        self.setMinimumSize(860, 580)
         self.setModal(True)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowCloseButtonHint)
         self._step = 0
         self._build_ui()
         self._go_to(0)
+        fit_dialog_to_screen(self, 900, 640, minimum_width=520, minimum_height=420)
 
     def _build_ui(self):
         root = QHBoxLayout(self)
@@ -124,7 +126,12 @@ class SetupWizard(QDialog):
         self.stack.addWidget(self._page_admin())
         self.stack.addWidget(self._page_storage())
         self.stack.addWidget(self._page_done())
-        right.addWidget(self.stack, 1)
+        page_scroll = QScrollArea()
+        page_scroll.setWidgetResizable(True)
+        page_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        page_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        page_scroll.setWidget(self.stack)
+        right.addWidget(page_scroll, 1)
 
         footer = QWidget()
         footer.setFixedHeight(62)
@@ -151,6 +158,15 @@ class SetupWizard(QDialog):
         right_widget = QWidget()
         right_widget.setLayout(right)
         root.addWidget(right_widget, 1)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        refit_after_show(self, 900, 640, minimum_width=520, minimum_height=420)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "left_panel"):
+            self.left_panel.setVisible(event.size().width() >= 720)
 
     def _card(self, *widgets) -> QWidget:
         w = QWidget()
@@ -181,7 +197,7 @@ class SetupWizard(QDialog):
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         h1 = QLabel(f"Welcome to {config.APP_NAME}")
-        h1.setStyleSheet("font-size: 22px; font-weight: 800; color: #E8F4FD;")
+        h1.setStyleSheet(f"font-size: 22px; font-weight: 800; color: {ThemeManager.t('text_primary')};")
         h1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         sub = QLabel(
@@ -223,7 +239,7 @@ class SetupWizard(QDialog):
         vl.setContentsMargins(40, 32, 40, 24); vl.setSpacing(14)
 
         h = QLabel("Company Information")
-        h.setStyleSheet("font-size: 18px; font-weight: 800; color: #E8F4FD;")
+        h.setStyleSheet(f"font-size: 18px; font-weight: 800; color: {ThemeManager.t('text_primary')};")
         vl.addWidget(h)
         sub = QLabel("This information appears on invoices and GST reports.")
         sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
@@ -265,7 +281,7 @@ class SetupWizard(QDialog):
         vl.setContentsMargins(40, 32, 40, 24); vl.setSpacing(14)
 
         h = QLabel("Administrator Account")
-        h.setStyleSheet("font-size: 18px; font-weight: 800; color: #E8F4FD;")
+        h.setStyleSheet(f"font-size: 18px; font-weight: 800; color: {ThemeManager.t('text_primary')};")
         vl.addWidget(h)
         sub = QLabel("Create the primary login credentials for your staff.")
         sub.setStyleSheet("color: #94A3B8; font-size: 12px;")
@@ -301,7 +317,7 @@ class SetupWizard(QDialog):
         vl.setContentsMargins(40, 32, 40, 24); vl.setSpacing(14)
 
         h = QLabel("Data Storage Location")
-        h.setStyleSheet("font-size: 18px; font-weight: 800; color: #E8F4FD;")
+        h.setStyleSheet(f"font-size: 18px; font-weight: 800; color: {ThemeManager.t('text_primary')};")
         vl.addWidget(h)
         sub = QLabel(
             "Your data is stored in a dedicated folder that persists through app updates.\n"
@@ -320,7 +336,7 @@ class SetupWizard(QDialog):
         self.data_path_lbl.setObjectName("Card")
         self.data_path_lbl.setStyleSheet(
             "font-family: Consolas, monospace; font-size: 11px; padding: 14px; "
-            "color: #60A5FA; border-radius: 10px; word-wrap: break-word;"
+            "color: #60A5FA; border-radius: 10px;"
         )
         self.data_path_lbl.setWordWrap(True)
         vl.addWidget(self.data_path_lbl)
@@ -352,7 +368,7 @@ class SetupWizard(QDialog):
         icon.setStyleSheet("font-size: 72px; background: transparent;")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         h = QLabel("Setup Complete!")
-        h.setStyleSheet("font-size: 22px; font-weight: 800; color: #E8F4FD;")
+        h.setStyleSheet(f"font-size: 22px; font-weight: 800; color: {ThemeManager.t('text_primary')};")
         h.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub = QLabel(
             "Your Business Suite is ready to use.\n"

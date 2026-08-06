@@ -13,6 +13,8 @@ from ui.components.form_dialog import FormDialog, ValidationError
 from db.manager import get_db
 from db.models import EMIRecord, EMIPayment, FinanceProvider, Customer, Sale
 from core.auth import AuthSession
+from ui.components.responsive import fit_dialog_to_screen, refit_after_show
+from calendar import monthrange
 
 class AddFinanceProviderDialog(FormDialog):
     def __init__(self, provider=None, parent=None):
@@ -47,10 +49,10 @@ class NewEMIDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Create New EMI Record")
-        self.setMinimumSize(600, 560)
         self.setModal(True)
         self._build_ui()
         self._load_data()
+        fit_dialog_to_screen(self, 680, 620, minimum_width=440, minimum_height=380)
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -184,8 +186,10 @@ class NewEMIDialog(QDialog):
             )
             session.add(rec); session.flush()
             for i in range(1, tenure + 1):
-                due_date = date(start.year + (start.month + i - 1) // 12,
-                                (start.month + i - 1) % 12 + 1, start.day)
+                due_year = start.year + (start.month + i - 1) // 12
+                due_month = (start.month + i - 1) % 12 + 1
+                due_day = min(start.day, monthrange(due_year, due_month)[1])
+                due_date = date(due_year, due_month, due_day)
                 ep = EMIPayment(emi_record_id=rec.id, installment_no=i,
                                 due_date=due_date, amount_due=round(emi, 2))
                 session.add(ep)
@@ -197,6 +201,10 @@ class NewEMIDialog(QDialog):
             QMessageBox.critical(self, "Error", str(e))
         finally:
             session.close()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        refit_after_show(self, 680, 620, minimum_width=440, minimum_height=380)
 
 class EMIFinancePage(QWidget):
     def __init__(self):
@@ -349,7 +357,7 @@ class EMIFinancePage(QWidget):
                         .order_by(EMIPayment.installment_no).all())
             dlg = QDialog(self)
             dlg.setWindowTitle(f"EMI Schedule – {rec.customer.name if rec.customer else '?'}")
-            dlg.setMinimumSize(640, 500)
+            fit_dialog_to_screen(dlg, 700, 540, minimum_width=440, minimum_height=340)
             vl = QVBoxLayout(dlg)
             vl.setContentsMargins(20, 20, 20, 20)
             info = QLabel(

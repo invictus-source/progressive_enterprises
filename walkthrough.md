@@ -228,27 +228,25 @@ The app ships with a **dark mode** theme built in QSS (Qt Style Sheets):
 
 ---
 
-## Building the Windows Installer
+## Building the Windows Installer from Linux
 
-### Prerequisites
+PyInstaller is not a cross-compiler. Use the repository's **Build Windows
+Installer** GitHub Actions workflow to build the genuine Windows installer from
+Linux. Run the workflow with a `MAJOR.MINOR.PATCH` version and download the
+`ProgressiveEnterprises-Windows-<version>` artifact when it finishes.
 
-- Python 3.12+ with the virtual environment at `.venv`
-- [Inno Setup 6](https://jrsoftware.org/isdl.php) installed
+The workflow tests the source, builds on 64-bit Windows, runs a packaged self-test
+with disposable data, compiles the Inno Setup installer and publishes the setup
+executable with its SHA-256 checksum.
 
-### Build
+On Windows, the equivalent local command is:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File build_installer.ps1
+.\build_installer.ps1 -Version 1.0.0
 ```
 
-This script:
-1. Runs PyInstaller via the spec file to create the `dist/` bundle
-2. Writes `qt.conf` next to the exe for Qt plugin discovery
-3. Verifies critical Qt plugin DLLs are present
-4. Installs Inno Setup via `winget` if missing
-5. Compiles the installer exe using `progressive.iss`
-
-The final installer lands at `installers/ProgressiveSetup_v1.0.0.exe`.
+Clean installations create fresh data on first run. Upgrades, reinstalls and
+uninstall operations preserve existing business data in AppData.
 
 ---
 
@@ -263,7 +261,10 @@ The final installer lands at `installers/ProgressiveSetup_v1.0.0.exe`.
 | `DATA_DIR/settings.json` | Company info and setup state |
 | `DATA_DIR/prefs.json` | Theme and UI preferences |
 
-The data directory is created automatically on first run. Backing up `progressive.db` is sufficient to preserve all business data.
+On Windows the data directory is `%APPDATA%\ProgressiveEnterprises\data`. It is
+created automatically on first run and is not removed by the installer or
+uninstaller. Back up the whole directory to preserve all business records and
+generated documents.
 
 ---
 

@@ -12,15 +12,27 @@ elif os.path.exists(".env"):
 
 APP_NAME          = os.getenv("APP_NAME", "Progressive Enterprises")
 APP_FULL_NAME     = os.getenv("APP_FULL_NAME", "Progressive Enterprises – Business Suite")
-APP_VERSION       = os.getenv("APP_VERSION", "1.0.0")
+_version_file = os.path.join(_base, "build_version.txt")
+try:
+    with open(_version_file, "r", encoding="utf-8") as _f:
+        _bundled_version = _f.read().strip() or "1.0.0"
+except OSError:
+    _bundled_version = "1.0.0"
+
+APP_VERSION       = os.getenv("APP_VERSION", _bundled_version)
 APP_PUBLISHER     = os.getenv("APP_PUBLISHER", "Progressive Enterprises")
 DEVELOPER_COMPANY = os.getenv("DEVELOPER_COMPANY", "Emberflock Labs")
 
 DATA_DIR_NAME = os.getenv("DATA_DIR_NAME", "ProgressiveEnterprises")
 DB_NAME       = os.getenv("DB_NAME", "progressive.db")
 
-_dev_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", DATA_DIR_NAME, "data")
-_launcher_json = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", DATA_DIR_NAME, "launcher.json")
+_roaming_root = (
+    os.environ.get("APPDATA")
+    if os.name == "nt" and os.environ.get("APPDATA")
+    else os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+)
+_dev_appdata = os.path.join(_roaming_root, DATA_DIR_NAME, "data")
+_launcher_json = os.path.join(_roaming_root, DATA_DIR_NAME, "launcher.json")
 
 _appdata = os.environ.get("PROGRESSIVE_DATA_DIR")
 
@@ -130,7 +142,22 @@ def load_prefs() -> dict:
                 return json.load(f)
         except Exception:
             pass
-    return {"theme": "dark", "font_scale": 1.0, "fullscreen_login": False}
+    return {"theme": "dark", "font_scale": 10, "fullscreen_login": False}
+
+
+def normalize_font_size(value, default: int = 10) -> int:
+    """Return a safe desktop font size, including for legacy scale values.
+
+    Older preference files stored a multiplier such as ``1.0``. Treat those
+    values as the normal font size instead of accidentally rendering 1pt text.
+    """
+    try:
+        size = float(value)
+    except (TypeError, ValueError):
+        size = float(default)
+    if size <= 2:
+        size = float(default)
+    return max(9, min(int(round(size)), 18))
 
 def save_prefs(data: dict):
     curr = load_prefs()

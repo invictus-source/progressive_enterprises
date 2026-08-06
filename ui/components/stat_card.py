@@ -34,17 +34,11 @@ class StatCard(QWidget):
         self._value_lbl = QLabel(value)
         self._value_lbl.setObjectName("StatValue")
         self._value_lbl.setWordWrap(True)
-        self._value_lbl.setStyleSheet(
-            f"font-size: 24px; font-weight: bold; color: #e2e8f0; background: none;"
-        )
         layout.addWidget(self._value_lbl)
 
         lbl = QLabel(label.upper())
         lbl.setObjectName("StatLabel")
         lbl.setWordWrap(True)
-        lbl.setStyleSheet(
-            "font-size: 10px; color: #8b949e; letter-spacing: 1px; background: none;"
-        )
         layout.addWidget(lbl)
 
         self.setMinimumWidth(120)

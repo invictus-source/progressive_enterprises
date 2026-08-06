@@ -128,18 +128,22 @@ class Toast(QFrame):
     def show_toast(self):
         if self.parent() is None:
             return
-            
+
         parent = self.parent()
         self._parent = parent
-        
-        if not hasattr(parent, '_toast_layout'):
-            parent._toast_layout = QVBoxLayout(parent)
-            parent._toast_layout.setContentsMargins(16, 16, 16, 0)
-            parent._toast_layout.setSpacing(8)
-            parent._toast_layout.addStretch(999)
-        self._toast_layout = parent._toast_layout
-        count = len([c for c in parent.children() if isinstance(c, Toast)])
-        self._toast_layout.insertWidget(count, self)
+
+        # Toasts are overlays. Installing another layout on a page that already
+        # owns one causes Qt warnings and can disturb the page geometry.
+        visible_toasts = [
+            child for child in parent.children()
+            if isinstance(child, Toast) and child is not self and child.isVisible()
+        ]
+        self.adjustSize()
+        x = max(12, parent.width() - self.width() - 16)
+        y = 16 + sum(child.height() + 8 for child in visible_toasts)
+        self.move(x, y)
+        self.raise_()
+        self.show()
         
         self.opacity = QGraphicsOpacityEffect(self)
         self.opacity.setOpacity(0.0)

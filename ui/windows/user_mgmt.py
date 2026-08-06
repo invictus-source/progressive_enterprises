@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QComboBox, QCheckBox, QDialog, QMessageBox,
     QFrame, QScrollArea
 )
+from PySide6.QtCore import Qt
 
 from ui.components.data_table import DataTable
 from ui.components.form_dialog import FormDialog, ValidationError

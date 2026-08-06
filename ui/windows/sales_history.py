@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QDate, Signal
 
 from db.manager import get_db
-from db.models import Sale, Product, Payment, EMIRecord
+from db.models import Sale, Product, Payment, EMIRecord, StockMovement
+from core.auth import AuthSession
 
 class SalesHistoryPage(QWidget):
     modify_sale_requested = Signal(int)
@@ -183,16 +184,27 @@ class SalesHistoryPage(QWidget):
 
         session = get_db()
         try:
-            sale = session.query(Sale).get(sale_id)
+            sale = session.get(Sale, sale_id)
             if not sale or sale.is_cancelled:
                 return
 
             sale.is_cancelled = True
 
             for item in sale.items:
-                product = session.query(Product).get(item.product_id)
+                product = session.get(Product, item.product_id)
                 if product:
                     product.stock_qty += item.qty
+                    user = AuthSession.current_user()
+                    session.add(StockMovement(
+                        product_id=product.id,
+                        movement_type="Sale Cancelled",
+                        quantity=item.qty,
+                        resulting_stock=product.stock_qty,
+                        reference_type="Sale",
+                        reference_id=sale.id,
+                        notes=f"Stock restored from {sale.invoice_no}",
+                        created_by=user.id if user else None,
+                    ))
 
             if sale.amount_received > 0 and sale.payment_mode != "EMI":
                 session.query(Payment).filter_by(sale_id=sale.id).delete()

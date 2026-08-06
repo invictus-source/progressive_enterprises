@@ -11,12 +11,13 @@ from ui.components.form_dialog import FormDialog, ValidationError
 from ui.components.toast import show_toast, show_success, show_warning, show_error
 from db.manager import get_db
 from db.models import Customer, Sale, Payment, EMIRecord
+from ui.components.responsive import fit_dialog_to_screen
 
 
 class AddEditCustomerDialog(FormDialog):
     def __init__(self, customer: Customer = None, parent=None):
         mode = "Edit Customer" if customer else "Add New Customer"
-        super().__init__(mode, "Fill in the customer details below", width=560, parent=parent)
+        super().__init__(mode, "Only name and phone are required. Other details can be added later.", width=580, height=680, parent=parent)
         self._customer = customer
         self._build_fields()
         if customer:
@@ -28,12 +29,9 @@ class AddEditCustomerDialog(FormDialog):
         self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("Full Name")
         self.add_field("Full Name *", self.name_edit)
 
-        row1 = QHBoxLayout()
         self.phone_edit = QLineEdit(); self.phone_edit.setPlaceholderText("Primary Phone")
         self.alt_phone_edit = QLineEdit(); self.alt_phone_edit.setPlaceholderText("Alternate Phone")
-        row1.addWidget(QLabel("Phone *")); row1.addWidget(self.phone_edit)
-        row1.addWidget(QLabel("Alt Phone")); row1.addWidget(self.alt_phone_edit)
-        self.body_layout.addLayout(row1)
+        self.add_field_row(("Phone *", self.phone_edit), ("Alt Phone", self.alt_phone_edit))
 
         self.email_edit = QLineEdit(); self.email_edit.setPlaceholderText("Email Address")
         self.add_field("Email", self.email_edit)
@@ -47,13 +45,10 @@ class AddEditCustomerDialog(FormDialog):
         self.add_field("City", self.city_edit)
 
         self.add_section("ID & GST Details")
-        id_row = QHBoxLayout()
         self.id_type_combo = QComboBox()
         self.id_type_combo.addItems(["Aadhaar", "PAN", "Voter ID", "Passport", "Driving License", "Other"])
         self.id_no_edit = QLineEdit(); self.id_no_edit.setPlaceholderText("ID Number")
-        id_row.addWidget(QLabel("ID Type")); id_row.addWidget(self.id_type_combo)
-        id_row.addWidget(QLabel("ID No.")); id_row.addWidget(self.id_no_edit)
-        self.body_layout.addLayout(id_row)
+        self.add_field_row(("ID Type", self.id_type_combo), ("ID No.", self.id_no_edit))
 
         self.gstin_edit = QLineEdit(); self.gstin_edit.setPlaceholderText("GSTIN (if applicable)")
         self.add_field("GSTIN", self.gstin_edit)
@@ -102,7 +97,7 @@ class CustomerLedgerDialog(QDialog):
     def __init__(self, customer: Customer, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Ledger – {customer.name}")
-        self.setMinimumSize(800, 600)
+        fit_dialog_to_screen(self, 850, 620, minimum_width=480, minimum_height=340)
         self.setModal(True)
         self._customer = customer
         self._build_ui()
@@ -112,8 +107,8 @@ class CustomerLedgerDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        header = QLabel(f"📒  Customer Ledger: {self._customer.name}  •  {self._customer.phone}")
-        header.setStyleSheet("font-size: 16px; font-weight: bold; color: #e2e8f0; padding-bottom: 8px;")
+        header = QLabel(f"Customer account: {self._customer.name}  •  {self._customer.phone}")
+        header.setObjectName("SectionTitle")
         layout.addWidget(header)
 
         tabs = QTabWidget()
@@ -226,7 +221,7 @@ class CustomersPage(QWidget):
                 ("➕  Add Customer", self._add_customer),
                 ("📒  Ledger",       self._view_ledger),
                 ("✏️  Edit",          self._edit_customer),
-                ("🗑  Deactivate",   self._deactivate),
+                ("⏸  Deactivate",   self._deactivate),
             ],
         )
         self.table.row_double_clicked.connect(self._view_ledger)

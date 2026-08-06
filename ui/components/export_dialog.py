@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
+from ui.components.responsive import fit_dialog_to_screen
 
 try:
     import qtawesome as qta
@@ -18,7 +19,7 @@ class ExportReadyDialog(QDialog):
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
         self.setWindowTitle("Export Successful")
-        self.setFixedSize(480, 260)
+        fit_dialog_to_screen(self, 520, 300, minimum_width=360, minimum_height=240)
         self.setModal(True)
         self._build_ui()
 

@@ -121,6 +121,7 @@ def export_sales_report(from_date: date, to_date: date) -> str:
 
 
 def export_gst_report(month: int, year: int) -> str:
+    from sqlalchemy import and_, or_
     session = get_db()
     try:
         start = datetime(year, month, 1)
@@ -132,19 +133,24 @@ def export_gst_report(month: int, year: int) -> str:
             Sale.sale_date >= start, Sale.sale_date < end, Sale.is_cancelled == False
         ).order_by(Sale.sale_date).all()
         purchases = session.query(Purchase).filter(
-            Purchase.purchase_date >= start, Purchase.purchase_date < end
+            or_(
+                and_(Purchase.invoice_date.is_not(None),
+                     Purchase.invoice_date >= start.date(), Purchase.invoice_date < end.date()),
+                and_(Purchase.invoice_date.is_(None),
+                     Purchase.purchase_date >= start, Purchase.purchase_date < end),
+            )
         ).order_by(Purchase.purchase_date).all()
 
         wb = Workbook()
 
         ws1 = wb.active
         ws1.title = "Outward Supplies"
-        ws1.merge_cells("A1:H1")
+        ws1.merge_cells("A1:I1")
         ws1["A1"].value = f"GSTR-1 Style – Outward Supplies – {period}"
         ws1["A1"].font = Font(bold=True, size=12, color="1E3A5F")
 
-        heads = ["Invoice", "Date", "Customer GSTIN", "Taxable", "CGST", "SGST", "Total GST", "Grand Total"]
-        widths = [18, 14, 22, 14, 12, 12, 14, 14]
+        heads = ["Invoice", "Date", "Customer GSTIN", "Taxable", "CGST", "SGST", "IGST", "Total GST", "Grand Total"]
+        widths = [18, 14, 22, 14, 12, 12, 12, 14, 14]
         for c, (h, w) in enumerate(zip(heads, widths), 1):
             _header_cell(ws1, 2, c, h, w)
 
@@ -152,24 +158,24 @@ def export_gst_report(month: int, year: int) -> str:
             for c, v in enumerate([
                 s.invoice_no, s.sale_date.strftime("%d-%m-%Y"),
                 s.customer.gstin if s.customer and s.customer.gstin else "URP",
-                s.taxable_amount, s.cgst_amount, s.sgst_amount,
+                s.taxable_amount, s.cgst_amount, s.sgst_amount, s.igst_amount,
                 s.total_gst, s.grand_total,
             ], 1):
                 _data_cell(ws1, r, c, v)
 
         ws2 = wb.create_sheet("Inward Supplies")
-        ws2.merge_cells("A1:H1")
+        ws2.merge_cells("A1:I1")
         ws2["A1"].value = f"Inward Supplies (Purchases) – {period}"
         ws2["A1"].font = Font(bold=True, size=12, color="1E3A5F")
 
-        for c, (h, w) in enumerate(zip(["GRN No.", "Date", "Vendor GSTIN", "Taxable", "CGST", "SGST", "ITC", "Grand"], widths), 1):
+        for c, (h, w) in enumerate(zip(["GRN No.", "Invoice Date", "Vendor GSTIN", "Taxable", "CGST", "SGST", "IGST", "ITC", "Grand"], widths), 1):
             _header_cell(ws2, 2, c, h, w)
 
         for r, p in enumerate(purchases, 3):
             for c, v in enumerate([
-                p.grn_no, p.purchase_date.strftime("%d-%m-%Y"),
+                p.grn_no, (p.invoice_date or p.purchase_date.date()).strftime("%d-%m-%Y"),
                 p.vendor.gstin if p.vendor and p.vendor.gstin else "—",
-                p.taxable_amount, p.cgst_amount, p.sgst_amount,
+                p.taxable_amount, p.cgst_amount, p.sgst_amount, p.igst_amount,
                 p.total_gst, p.grand_total,
             ], 1):
                 _data_cell(ws2, r, c, v)

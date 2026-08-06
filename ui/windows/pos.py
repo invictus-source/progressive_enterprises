@@ -3,16 +3,116 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QComboBox, QFrame,
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
-    QDialog, QScrollArea, QSizePolicy, QListWidget, QListWidgetItem
+    QDialog, QScrollArea, QSizePolicy, QListWidget, QListWidgetItem,
+    QSpinBox, QGridLayout, QApplication
 )
 from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QIntValidator, QDoubleValidator
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QKeySequence, QShortcut
 
 from db.manager import get_db
-from db.models import Product, Customer, Sale, SaleItem, Payment, FinanceProvider
+from db.models import (
+    Product, Customer, Sale, SaleItem, Payment, FinanceProvider, StockMovement,
+)
 from core.auth import AuthSession
 from ui.components.toast import Toast, show_toast, show_success, show_warning, show_error
+from ui.components.form_dialog import FormDialog, ValidationError
 import config
+
+
+class QuickCustomerDialog(FormDialog):
+    """The only customer details needed while a customer is waiting."""
+
+    def __init__(self, suggested_name: str = "", parent=None):
+        super().__init__(
+            "Add Customer to This Bill",
+            "Name is enough. Phone is optional and other details can be added later.",
+            width=440, height=340, parent=parent,
+        )
+        self.name_edit = QLineEdit(suggested_name)
+        self.name_edit.setPlaceholderText("Customer name")
+        self.phone_edit = QLineEdit()
+        self.phone_edit.setPlaceholderText("Phone number (optional)")
+        self.add_field("Customer Name *", self.name_edit)
+        self.add_field("Phone", self.phone_edit)
+        self.save_btn.setText("Add Customer")
+        self.finalize()
+
+    def _collect(self):
+        name = self.name_edit.text().strip()
+        if not name:
+            raise ValidationError("Enter the customer name.")
+        return {"name": name, "phone": self.phone_edit.text().strip()}
+
+
+class QuickProductDialog(FormDialog):
+    """Short product form used without leaving an in-progress bill."""
+
+    def __init__(self, suggested_name: str = "", parent=None):
+        super().__init__(
+            "Add New Item to This Bill",
+            "Enter the sale details now. Full product details can be added later.",
+            width=500, height=560, parent=parent,
+        )
+        looks_like_barcode = bool(
+            suggested_name
+            and " " not in suggested_name
+            and len(suggested_name) >= 8
+            and sum(character.isdigit() for character in suggested_name) >= 4
+        )
+        self.name_edit = QLineEdit("" if looks_like_barcode else suggested_name)
+        self.name_edit.setPlaceholderText("e.g. Luminous Eco Volt 1050")
+        self.add_field("Item Name *", self.name_edit)
+
+        self.brand_edit = QLineEdit()
+        self.brand_edit.setPlaceholderText("e.g. Luminous")
+        self.model_edit = QLineEdit()
+        self.model_edit.setPlaceholderText("Model number")
+        self.add_field_row(("Brand", self.brand_edit), ("Model", self.model_edit))
+
+        self.price_edit = QLineEdit()
+        self.price_edit.setPlaceholderText("0.00")
+        self.price_edit.setValidator(QDoubleValidator(0.01, 9_999_999, 2))
+        self.add_field("Sale Price before GST (₹) *", self.price_edit)
+
+        self.stock_spin = QSpinBox()
+        self.stock_spin.setRange(1, 99_999)
+        self.stock_spin.setValue(1)
+        self.stock_spin.setSuffix(" pcs available")
+        self.gst_combo = QComboBox()
+        self.gst_combo.addItems([f"{rate}%" for rate in config.GST_SLABS])
+        self.gst_combo.setCurrentText("18%")
+        self.add_field_row(("Stock Available Now", self.stock_spin), ("GST Rate", self.gst_combo))
+
+        self.barcode_edit = QLineEdit()
+        self.barcode_edit.setPlaceholderText("Scan or type barcode (optional)")
+        if looks_like_barcode:
+            self.barcode_edit.setText(suggested_name)
+        self.add_field("Barcode / SKU", self.barcode_edit)
+        self.save_btn.setText("Save & Add to Bill")
+        self.finalize()
+
+    def _collect(self):
+        name = self.name_edit.text().strip()
+        if not name:
+            raise ValidationError("Enter the item name.")
+        try:
+            selling_price = float(self.price_edit.text().strip())
+        except ValueError:
+            raise ValidationError("Enter a valid sale price.")
+        if selling_price <= 0:
+            raise ValidationError("Sale price must be greater than zero.")
+        return {
+            "name": name,
+            "brand": self.brand_edit.text().strip() or None,
+            "model_no": self.model_edit.text().strip() or None,
+            "selling_price": selling_price,
+            "purchase_price": 0.0,
+            "stock_qty": self.stock_spin.value(),
+            "min_stock": 1,
+            "gst_rate": float(self.gst_combo.currentText().replace("%", "")),
+            "barcode": self.barcode_edit.text().strip() or None,
+            "unit": "Pcs",
+        }
 
 class CustomerSearchWidget(QWidget):
     customer_selected = Signal(object, str)
@@ -174,14 +274,16 @@ class POSPage(QWidget):
         root.setSpacing(12)
 
         left_scroll = QScrollArea()
+        self.left_scroll = left_scroll
         left_scroll.setWidgetResizable(True)
         left_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         left_widget = QWidget()
         left = QVBoxLayout(left_widget)
         left.setSpacing(10)
         left.setContentsMargins(4, 4, 4, 4)
 
-        title = QLabel("Point of Sale")
+        title = QLabel("New Sale / Billing")
         title.setObjectName("PageTitle")
         left.addWidget(title)
 
@@ -190,21 +292,33 @@ class POSPage(QWidget):
         sf_layout.setContentsMargins(12, 10, 12, 10)
         sf_layout.setSpacing(8)
 
-        search_row = QHBoxLayout()
+        search_row = QGridLayout()
         search_row.setSpacing(8)
 
         self.product_search = QLineEdit()
         self.product_search.setObjectName("SearchBar")
-        self.product_search.setPlaceholderText("Search by name, brand, barcode...")
+        self.product_search.setPlaceholderText("Type product name, brand or scan barcode…")
         self.product_search.setMinimumHeight(34)
         self.product_search.textChanged.connect(self._search_products)
-        search_row.addWidget(self.product_search, 3)
+        self.product_search.returnPressed.connect(self._add_search_result)
+        search_row.addWidget(self.product_search, 0, 0)
 
         self.product_results = QComboBox()
         self.product_results.setMinimumWidth(200)
+        self.product_results.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.product_results.setMinimumContentsLength(12)
         self.product_results.setMinimumHeight(34)
         self.product_results.currentIndexChanged.connect(self._on_product_select)
-        search_row.addWidget(self.product_results, 3)
+        search_row.addWidget(self.product_results, 1, 0, 1, 2)
+
+        self.quick_product_btn = QPushButton("＋ New Item")
+        self.quick_product_btn.setObjectName("GhostBtn")
+        self.quick_product_btn.setMinimumHeight(34)
+        self.quick_product_btn.setToolTip("Create an item without leaving this bill (F3)")
+        self.quick_product_btn.clicked.connect(self._quick_add_product)
+        search_row.addWidget(self.quick_product_btn, 0, 1)
+        search_row.setColumnStretch(0, 1)
         sf_layout.addLayout(search_row)
 
         qty_row = QHBoxLayout()
@@ -241,7 +355,7 @@ class POSPage(QWidget):
         qty_row.addWidget(self.stock_lbl)
         qty_row.addStretch()
 
-        self.add_to_cart_btn = QPushButton("➕  Add to Cart")
+        self.add_to_cart_btn = QPushButton("＋  Add Item")
         self.add_to_cart_btn.setObjectName("PrimaryBtn")
         self.add_to_cart_btn.setMinimumHeight(34)
         self.add_to_cart_btn.setMinimumWidth(120)
@@ -251,8 +365,8 @@ class POSPage(QWidget):
 
         left.addWidget(search_frame)
 
-        cart_header = QLabel("Shopping Cart")
-        cart_header.setStyleSheet("font-size: 14px; font-weight: bold; color: #e2e8f0;")
+        cart_header = QLabel("Items in this bill")
+        cart_header.setObjectName("SectionTitle")
         left.addWidget(cart_header)
 
         self.cart_table = QTableWidget()
@@ -272,23 +386,25 @@ class POSPage(QWidget):
         self.cart_table.cellDoubleClicked.connect(self._edit_cart_item)
 
         cart_actions = QHBoxLayout()
-        hint_lbl = QLabel("💡 Double-click a row to edit qty / discount")
+        hint_lbl = QLabel("Tip: Double-click an item to change quantity or discount")
         hint_lbl.setStyleSheet("color: #64748B; font-size: 10px;")
         hint_lbl.setWordWrap(True)
         cart_actions.addWidget(hint_lbl)
         cart_actions.addStretch()
-        remove_btn = QPushButton("🗑  Remove Selected")
-        remove_btn.setMinimumHeight(28)
-        remove_btn.clicked.connect(self._remove_from_cart)
-        cart_actions.addWidget(remove_btn)
+        self.remove_btn = QPushButton("🗑  Remove Selected")
+        self.remove_btn.setMinimumHeight(28)
+        self.remove_btn.clicked.connect(self._remove_from_cart)
+        cart_actions.addWidget(self.remove_btn)
         left.addLayout(cart_actions)
 
         left_scroll.setWidget(left_widget)
         root.addWidget(left_scroll, 3)
 
         right_scroll = QScrollArea()
+        self.right_scroll = right_scroll
         right_scroll.setWidgetResizable(True)
         right_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        right_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         right_widget = QWidget()
         right = QVBoxLayout(right_widget)
         right.setSpacing(10)
@@ -298,23 +414,29 @@ class POSPage(QWidget):
         cf = QVBoxLayout(cust_frame); cf.setContentsMargins(12, 10, 12, 10)
         cf.setSpacing(6)
 
-        cust_header = QHBoxLayout()
-        cust_lbl = QLabel("Customer")
+        cust_header = QGridLayout()
+        cust_lbl = QLabel("Customer (optional)")
         cust_lbl.setStyleSheet("font-weight: 700; font-size: 12px;")
-        cust_header.addWidget(cust_lbl)
-        cust_header.addStretch()
+        cust_header.addWidget(cust_lbl, 0, 0, 1, 2)
+        self.quick_customer_btn = QPushButton("＋ New Customer")
+        self.quick_customer_btn.setObjectName("GhostBtn")
+        self.quick_customer_btn.setMinimumHeight(24)
+        self.quick_customer_btn.setToolTip("Add a customer without leaving this bill (F2)")
+        self.quick_customer_btn.clicked.connect(self._quick_add_customer)
+        cust_header.addWidget(self.quick_customer_btn, 1, 0)
         self.clear_customer_btn = QPushButton("✕  Clear")
         self.clear_customer_btn.setObjectName("FlatBtn")
         self.clear_customer_btn.setMinimumHeight(24)
         self.clear_customer_btn.clicked.connect(self._clear_customer)
-        cust_header.addWidget(self.clear_customer_btn)
+        cust_header.addWidget(self.clear_customer_btn, 1, 1)
+        cust_header.setColumnStretch(0, 1)
         cf.addLayout(cust_header)
 
         self.customer_picker = CustomerSearchWidget()
         self.customer_picker.customer_selected.connect(self._on_customer_selected)
         cf.addWidget(self.customer_picker)
 
-        self.selected_customer_lbl = QLabel("Walk-in Customer")
+        self.selected_customer_lbl = QLabel("Walk-in Customer — no details needed")
         self.selected_customer_lbl.setStyleSheet("color: #60a5fa; font-size: 11px; padding: 2px 0;")
         self.selected_customer_lbl.setWordWrap(True)
         cf.addWidget(self.selected_customer_lbl)
@@ -332,8 +454,8 @@ class POSPage(QWidget):
 
         def add_row(label, widget, bold=False):
             row = QHBoxLayout()
-            lbl = QLabel(label); lbl.setStyleSheet("color: #8b949e;")
-            if bold: lbl.setStyleSheet("font-weight: bold; color: #e2e8f0;")
+            lbl = QLabel(label)
+            lbl.setObjectName("SectionTitle" if bold else "MutedText")
             row.addWidget(lbl); row.addStretch(); row.addWidget(widget)
             tf.addLayout(row)
             return widget
@@ -352,7 +474,7 @@ class POSPage(QWidget):
 
         extra_disc_row = QHBoxLayout()
         extra_disc_lbl = QLabel("Extra Discount (₹)")
-        extra_disc_lbl.setStyleSheet("color: #8b949e;")
+        extra_disc_lbl.setObjectName("MutedText")
         extra_disc_row.addWidget(extra_disc_lbl)
         extra_disc_row.addStretch()
         self.extra_discount_input = QLineEdit("0")
@@ -373,7 +495,7 @@ class POSPage(QWidget):
 
         grand_row = QHBoxLayout()
         grand_lbl = QLabel("GRAND TOTAL")
-        grand_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #e2e8f0;")
+        grand_lbl.setObjectName("SectionTitle")
         grand_row.addWidget(grand_lbl); grand_row.addStretch(); grand_row.addWidget(self.lbl_grand)
         tf.addLayout(grand_row)
         right.addWidget(totals_frame)
@@ -383,7 +505,7 @@ class POSPage(QWidget):
         pf.setSpacing(6)
         pf.addWidget(QLabel("Payment Mode"))
         self.payment_mode_combo = QComboBox()
-        self.payment_mode_combo.addItems(["Cash", "Card", "UPI", "EMI", "Mixed"])
+        self.payment_mode_combo.addItems(["Cash", "UPI", "Card", "Credit", "EMI", "Mixed"])
         self.payment_mode_combo.setMinimumHeight(32)
         self.payment_mode_combo.currentTextChanged.connect(self._on_payment_mode_changed)
         pf.addWidget(self.payment_mode_combo)
@@ -392,11 +514,15 @@ class POSPage(QWidget):
         self.provider_lbl.hide()
         self.finance_provider_combo = QComboBox()
         self.finance_provider_combo.setMinimumHeight(32)
+        self.finance_provider_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.finance_provider_combo.setMinimumContentsLength(10)
         self.finance_provider_combo.hide()
         pf.addWidget(self.provider_lbl)
         pf.addWidget(self.finance_provider_combo)
 
-        pf.addWidget(QLabel("Amount Received (Down Payment if EMI)"))
+        self.amount_received_lbl = QLabel("Amount Received")
+        pf.addWidget(self.amount_received_lbl)
         self.amount_received_input = QLineEdit()
         self.amount_received_input.setMinimumHeight(32)
         self.amount_received_input.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -410,14 +536,30 @@ class POSPage(QWidget):
         self.lbl_balance.setWordWrap(True)
         pf.addWidget(self.lbl_balance)
 
+        self.payment_hint = QLabel("")
+        self.payment_hint.setObjectName("HintText")
+        self.payment_hint.setWordWrap(True)
+        pf.addWidget(self.payment_hint)
+
         right.addWidget(pay_frame)
         right.addStretch()
 
-        self.confirm_btn = QPushButton("✅  Confirm Sale & Print Invoice")
+        sale_actions = QVBoxLayout()
+        sale_actions.setSpacing(8)
+
+        self.confirm_btn = QPushButton("Save & Print Bill  (F4)")
         self.confirm_btn.setObjectName("SuccessBtn")
         self.confirm_btn.setMinimumHeight(40)
-        self.confirm_btn.clicked.connect(self._confirm_sale)
-        right.addWidget(self.confirm_btn)
+        self.confirm_btn.clicked.connect(lambda: self._confirm_sale(True))
+        sale_actions.addWidget(self.confirm_btn)
+
+        self.save_only_btn = QPushButton("Save Only")
+        self.save_only_btn.setObjectName("GhostBtn")
+        self.save_only_btn.setMinimumHeight(34)
+        self.save_only_btn.setToolTip("Save the sale without opening the invoice")
+        self.save_only_btn.clicked.connect(lambda: self._confirm_sale(False))
+        sale_actions.addWidget(self.save_only_btn)
+        right.addLayout(sale_actions)
 
         clear_btn = QPushButton("🗑  Clear Cart")
         clear_btn.setObjectName("DangerBtn")
@@ -426,25 +568,175 @@ class POSPage(QWidget):
         right.addWidget(clear_btn)
 
         right_scroll.setWidget(right_widget)
-        root.addWidget(right_scroll, 1)
+        root.addWidget(right_scroll, 2)
+
+        QShortcut(QKeySequence("F2"), self).activated.connect(self._quick_add_customer)
+        QShortcut(QKeySequence("F3"), self).activated.connect(self._quick_add_product)
+        QShortcut(QKeySequence("F4"), self).activated.connect(
+            lambda: self._confirm_sale(True))
+        QShortcut(QKeySequence("Ctrl+L"), self).activated.connect(
+            self._focus_product_search)
+
+        self._update_compact_table()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_compact_table()
+
+    def _update_compact_table(self):
+        """Keep the bill readable by hiding accounting detail on narrow screens."""
+        if not hasattr(self, "cart_table"):
+            return
+        compact = self.width() < 980
+        very_compact = compact and QApplication.font().pointSize() >= 14
+        self.cart_table.setColumnHidden(1, very_compact)
+        for column in (3, 4, 5):  # discount, taxable and GST remain in Bill Summary
+            self.cart_table.setColumnHidden(column, compact)
+        header = self.cart_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column in (1, 2, 6):
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+        self.quick_product_btn.setText("＋ Item" if compact else "＋ New Item")
+        self.add_to_cart_btn.setText("＋ Add" if compact else "＋  Add Item")
+        self.quick_customer_btn.setText("＋ Customer" if compact else "＋ New Customer")
+        self.clear_customer_btn.setText("✕" if compact else "✕  Clear")
+        self.clear_customer_btn.setMaximumWidth(42 if compact else 16_777_215)
+        self.remove_btn.setText("Remove" if compact else "🗑  Remove Selected")
+        self.confirm_btn.setText("Save & Print (F4)" if compact else "Save & Print Bill  (F4)")
+        self.customer_picker.search_input.setPlaceholderText(
+            "Find customer…" if compact else "Search by name or phone…")
+        if self._selected_customer_id is None:
+            self.selected_customer_lbl.setText(
+                "Walk-in Customer" if compact else "Walk-in Customer — no details needed")
 
     def _h_line(self):
         f = QFrame(); f.setFrameShape(QFrame.Shape.HLine)
         return f
 
+    def _focus_product_search(self):
+        self.product_search.setFocus()
+        self.product_search.selectAll()
+
+    def _quick_add_customer(self):
+        suggested = self.customer_picker.search_input.text().strip()
+        dlg = QuickCustomerDialog(suggested, self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        data = dlg.get_data()
+        session = get_db()
+        try:
+            phone = data["phone"]
+            existing = None
+            if phone:
+                existing = session.query(Customer).filter(
+                    Customer.phone == phone, Customer.is_active == True).first()
+            if existing:
+                customer_id = existing.id
+                display = f"{existing.name}  –  {existing.phone}"
+            else:
+                customer = Customer(name=data["name"], phone=phone)
+                session.add(customer)
+                session.commit()
+                customer_id = customer.id
+                display = f"{customer.name}  –  {customer.phone}" if customer.phone else customer.name
+        except Exception as exc:
+            session.rollback()
+            show_error(self, f"Could not add customer: {exc}")
+            return
+        finally:
+            session.close()
+
+        self._load_customers(reset_selection=False)
+        self._selected_customer_id = customer_id
+        self.customer_picker.set_customer(customer_id, display)
+        self.selected_customer_lbl.setText(f"✓  {display}")
+        self._focus_product_search()
+
+    def _quick_add_product(self):
+        suggested = self.product_search.text().strip()
+        dlg = QuickProductDialog(suggested, self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        data = dlg.get_data()
+        session = get_db()
+        try:
+            barcode = data.get("barcode")
+            if barcode and session.query(Product).filter(Product.barcode == barcode).first():
+                show_warning(self, "This barcode is already used by another item.")
+                return
+            product = Product(**data)
+            session.add(product)
+            session.flush()
+            user = AuthSession.current_user()
+            session.add(StockMovement(
+                product_id=product.id,
+                movement_type="Opening",
+                quantity=product.stock_qty,
+                resulting_stock=product.stock_qty,
+                reference_type="Quick Sale",
+                notes="Item created while making a bill",
+                created_by=user.id if user else None,
+            ))
+            session.commit()
+            product_id = product.id
+            product_name = product.name
+        except Exception as exc:
+            session.rollback()
+            show_error(self, f"Could not add item: {exc}")
+            return
+        finally:
+            session.close()
+
+        self.product_search.setText(product_name)
+        index = self.product_results.findData(product_id)
+        if index >= 0:
+            self.product_results.setCurrentIndex(index)
+        self._add_to_cart()
+
+    def _add_search_result(self):
+        if self.product_results.currentData():
+            self._add_to_cart()
+        else:
+            self._quick_add_product()
+
     def refresh(self):
         self._load_customers()
         self._load_providers()
         self._search_products("")
+        QTimer.singleShot(0, self._focus_product_search)
 
     def _on_payment_mode_changed(self, text: str):
         if text == "EMI":
+            self.amount_received_lbl.setText("Down Payment")
             self.provider_lbl.show()
             self.finance_provider_combo.show()
-            self.lbl_balance.setText("Loan Amount: ₹0.00")
-        else:
+            self.amount_received_input.setEnabled(True)
+            self.payment_hint.setText("Enter any down payment. A registered customer is required for EMI.")
+            self.amount_received_input.setText("0.00")
+            self._update_balance()
+        elif text == "Credit":
+            self.amount_received_lbl.setText("Amount Received")
             self.provider_lbl.hide()
             self.finance_provider_combo.hide()
+            self.amount_received_input.setText("0.00")
+            self.amount_received_input.setEnabled(False)
+            self.payment_hint.setText("A customer is required so the balance can be tracked.")
+            self._update_balance()
+        else:
+            self.amount_received_lbl.setText("Amount Received")
+            self.provider_lbl.hide()
+            self.finance_provider_combo.hide()
+            self.amount_received_input.setEnabled(True)
+            self.payment_hint.setText(
+                "Enter the amount received now." if text == "Mixed" else "")
+            if text in ("Cash", "UPI", "Card"):
+                try:
+                    grand = float(self.lbl_grand.text().replace("₹", "").replace(",", ""))
+                except ValueError:
+                    grand = 0.0
+                self.amount_received_input.setText(f"{grand:.2f}")
             self._update_balance()
 
     def _load_providers(self):
@@ -458,29 +750,36 @@ class POSPage(QWidget):
         finally:
             session.close()
 
-    def _load_customers(self):
+    def _load_customers(self, reset_selection: bool = True):
         session = get_db()
         try:
             self._customers = session.query(Customer).filter_by(
                 is_active=True).order_by(Customer.name).all()
             self.customer_picker.load_customers(self._customers)
-            self._selected_customer_id = None
-            self.customer_picker.clear_selection()
-            self.selected_customer_lbl.setText("Walk-in Customer")
+            if reset_selection:
+                self._selected_customer_id = None
+                self.customer_picker.clear_selection()
+                self.selected_customer_lbl.setText(
+                    "Walk-in Customer" if self.width() < 980
+                    else "Walk-in Customer — no details needed")
         finally:
             session.close()
 
     def _on_customer_selected(self, customer_id, display_text: str):
         self._selected_customer_id = customer_id
         if customer_id is None:
-            self.selected_customer_lbl.setText("Walk-in Customer")
+            self.selected_customer_lbl.setText(
+                "Walk-in Customer" if self.width() < 980
+                else "Walk-in Customer — no details needed")
         else:
             self.selected_customer_lbl.setText(f"✓  {display_text}")
 
     def _clear_customer(self):
         self._selected_customer_id = None
         self.customer_picker.clear_selection()
-        self.selected_customer_lbl.setText("Walk-in Customer")
+        self.selected_customer_lbl.setText(
+            "Walk-in Customer" if self.width() < 980
+            else "Walk-in Customer — no details needed")
 
     def _search_products(self, text: str):
         session = get_db()
@@ -494,12 +793,28 @@ class POSPage(QWidget):
                 )
             products = q.limit(30).all()
             self.product_results.clear()
-            self.product_results.addItem("— Select Product —", None)
+            if products:
+                self.product_results.addItem("Select an item", None)
+            else:
+                self.product_results.addItem("No match — click New Item", None)
             for p in products:
                 label = f"{p.name} | ₹{p.selling_price:,.0f} | Stock: {p.stock_qty}"
                 if p.brand:
                     label = f"{p.brand} {label}"
                 self.product_results.addItem(label, p.id)
+
+            typed = text.strip().lower()
+            exact_index = -1
+            if typed:
+                for index, product in enumerate(products, start=1):
+                    if ((product.barcode and product.barcode.lower() == typed)
+                            or product.name.lower() == typed):
+                        exact_index = index
+                        break
+            if exact_index >= 0:
+                self.product_results.setCurrentIndex(exact_index)
+            elif len(products) == 1 and typed:
+                self.product_results.setCurrentIndex(1)
         finally:
             session.close()
 
@@ -510,7 +825,7 @@ class POSPage(QWidget):
             return
         session = get_db()
         try:
-            product = session.query(Product).get(product_id)
+            product = session.get(Product, product_id)
             if product:
                 self.stock_lbl.setText(f"Available: {product.stock_qty} {product.unit or 'Pcs'}")
                 max_qty = max(1, product.stock_qty) if product.stock_qty > 0 else 1
@@ -543,7 +858,7 @@ class POSPage(QWidget):
 
         session = get_db()
         try:
-            product = session.query(Product).get(product_id)
+            product = session.get(Product, product_id)
             if not product or product.stock_qty <= 0:
                 show_warning(self, "This product is out of stock."); return
             if qty > product.stock_qty:
@@ -563,6 +878,8 @@ class POSPage(QWidget):
                     self._refresh_cart()
                     self.qty_input.setText("1")
                     self.disc_input.setText("0")
+                    self.product_search.clear()
+                    self._focus_product_search()
                 else:
                     show_warning(self, "Cannot add more than available stock.")
                 return
@@ -571,6 +888,8 @@ class POSPage(QWidget):
         self._refresh_cart()
         self.qty_input.setText("1")
         self.disc_input.setText("0")
+        self.product_search.clear()
+        self._focus_product_search()
 
     def _remove_from_cart(self):
         row = self.cart_table.currentRow()
@@ -585,14 +904,26 @@ class POSPage(QWidget):
     def load_sale_for_edit(self, sale_obj):
         session = get_db()
         try:
-            db_sale = session.query(Sale).get(sale_obj.id)
+            db_sale = session.get(Sale, sale_obj.id)
             if not db_sale.is_cancelled:
                 db_sale.is_cancelled = True
 
                 from db.models import Payment
                 for item in db_sale.items:
-                    product = session.query(Product).get(item.product_id)
-                    if product: product.stock_qty += item.qty
+                    product = session.get(Product, item.product_id)
+                    if product:
+                        product.stock_qty += item.qty
+                        user = AuthSession.current_user()
+                        session.add(StockMovement(
+                            product_id=product.id,
+                            movement_type="Sale Cancelled",
+                            quantity=item.qty,
+                            resulting_stock=product.stock_qty,
+                            reference_type="Sale",
+                            reference_id=db_sale.id,
+                            notes=f"Stock restored from {db_sale.invoice_no}",
+                            created_by=user.id if user else None,
+                        ))
 
                 if db_sale.amount_received > 0 and db_sale.payment_mode != "EMI":
                     session.query(Payment).filter_by(sale_id=db_sale.id).delete()
@@ -606,7 +937,7 @@ class POSPage(QWidget):
             self._cart.clear()
 
             for item in db_sale.items:
-                product = session.query(Product).get(item.product_id)
+                product = session.get(Product, item.product_id)
                 if product:
                     ci = CartItem(product, item.qty, item.discount_pct)
                     self._cart.append(ci)
@@ -692,9 +1023,12 @@ class POSPage(QWidget):
         self.lbl_sgst.setText(f"₹{sgst:,.2f}")
         self.lbl_grand.setText(f"₹{grand:,.2f}")
 
-        self.amount_received_input.blockSignals(True)
-        self.amount_received_input.setText(f"{grand:.2f}")
-        self.amount_received_input.blockSignals(False)
+        mode = self.payment_mode_combo.currentText()
+        if mode in ("Cash", "UPI", "Card", "Credit"):
+            received_default = 0.0 if mode == "Credit" else grand
+            self.amount_received_input.blockSignals(True)
+            self.amount_received_input.setText(f"{received_default:.2f}")
+            self.amount_received_input.blockSignals(False)
         self._update_balance()
 
     def _update_balance(self):
@@ -788,9 +1122,9 @@ class POSPage(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._refresh_cart()
 
-    def _confirm_sale(self):
+    def _confirm_sale(self, print_invoice: bool = True):
         if not self._cart:
-            show_warning(self, "Please add products to the cart first.")
+            show_warning(self, "Add at least one product before completing the sale.")
             return
 
         session = get_db()
@@ -806,6 +1140,14 @@ class POSPage(QWidget):
             balance = max(0.0, grand - received)
             mode = self.payment_mode_combo.currentText()
 
+            if balance > 0 and not self._selected_customer_id:
+                show_warning(
+                    self,
+                    "Add a customer before saving credit or a pending balance. "
+                    "Use the + New Customer button; the bill will stay open."
+                )
+                return
+
             if mode == "EMI":
                 provider_id = self.finance_provider_combo.currentData()
                 if not provider_id:
@@ -815,12 +1157,15 @@ class POSPage(QWidget):
             else:
                 provider_id = None
 
+            # Cash tendered may be higher than the bill because change is due;
+            # accounting records only the amount actually applied to the sale.
+            applied_received = min(max(received, 0.0), grand)
+
             subtotal      = sum(i.product.selling_price * i.qty for i in self._cart)
             item_discount = sum(i.line_discount for i in self._cart)
-            extra_disc    = self._extra_discount_value()
-            discount      = item_discount + extra_disc
-
             after_items = subtotal - item_discount
+            extra_disc = min(self._extra_discount_value(), after_items)
+            discount = item_discount + extra_disc
             if after_items > 0:
                 gst_scale = 1 - extra_disc / after_items
             else:
@@ -843,7 +1188,7 @@ class POSPage(QWidget):
                 total_gst=gst_total,
                 grand_total=grand,
                 payment_mode=mode,
-                amount_received=received,
+                amount_received=applied_received,
                 balance_due=balance,
                 created_by=user.id if user else None,
             )
@@ -851,6 +1196,9 @@ class POSPage(QWidget):
             session.flush()
 
             for item in self._cart:
+                line_scale = gst_scale if after_items > 0 else 1.0
+                line_taxable = item.taxable * line_scale
+                line_gst = item.gst_amount * line_scale
                 si = SaleItem(
                     sale_id=sale.id,
                     product_id=item.product.id,
@@ -859,13 +1207,23 @@ class POSPage(QWidget):
                     unit_price=item.product.selling_price,
                     discount_pct=item.discount_pct,
                     gst_rate=item.product.gst_rate,
-                    taxable_amount=item.taxable,
-                    gst_amount=item.gst_amount,
-                    line_total=item.line_total,
+                    taxable_amount=line_taxable,
+                    gst_amount=line_gst,
+                    line_total=line_taxable + line_gst,
                 )
                 session.add(si)
-                p = session.query(Product).get(item.product.id)
+                p = session.get(Product, item.product.id)
                 p.stock_qty -= item.qty
+                session.add(StockMovement(
+                    product_id=p.id,
+                    movement_type="Sale",
+                    quantity=-item.qty,
+                    resulting_stock=p.stock_qty,
+                    reference_type="Sale",
+                    reference_id=sale.id,
+                    notes=f"Sold on {invoice_no}",
+                    created_by=user.id if user else None,
+                ))
 
             if mode == "EMI":
                 from ui.windows.emi_finance import NewEMIDialog
@@ -880,7 +1238,7 @@ class POSPage(QWidget):
                             break
                 dlg.provider_combo.setCurrentIndex(dlg.provider_combo.findData(provider_id))
                 dlg.loan_edit.setText(f"{grand:.2f}")
-                dlg.down_edit.setText(f"{received:.2f}")
+                dlg.down_edit.setText(f"{applied_received:.2f}")
 
                 if dlg.exec() == QDialog.DialogCode.Accepted:
                     s2 = get_db()
@@ -896,12 +1254,12 @@ class POSPage(QWidget):
                     show_warning(self, "Sale saved as EMI, but no loan schedule was created. You can create it manually later from the Finance tab.")
 
             else:
-                if received > 0:
+                if applied_received > 0:
                     pmt = Payment(
                         payment_type="receipt",
                         customer_id=customer_id,
                         sale_id=sale.id,
-                        amount=received,
+                        amount=applied_received,
                         mode=mode,
                         notes=f"Auto-receipt for Sale {invoice_no}",
                         created_by=user.id if user else None
@@ -911,16 +1269,21 @@ class POSPage(QWidget):
 
             show_success(self, f"Invoice {invoice_no} created!\nGrand Total: ₹{grand:,.2f}\nBalance Due: ₹{balance:,.2f}")
 
-            try:
-                from core.invoice_gen import generate_invoice
-                sale_obj = session.query(Sale).get(sale.id)
-                pdf_path = generate_invoice(sale_obj)
-                from ui.components.export_dialog import ExportReadyDialog
-                ExportReadyDialog(pdf_path, self).exec()
-            except Exception as inv_err:
-                print(f"[POS] Invoice PDF error: {inv_err}")
+            if print_invoice:
+                try:
+                    from core.invoice_gen import generate_invoice
+                    sale_obj = session.get(Sale, sale.id)
+                    pdf_path = generate_invoice(sale_obj)
+                    from ui.components.export_dialog import ExportReadyDialog
+                    ExportReadyDialog(pdf_path, self).exec()
+                except Exception as inv_err:
+                    show_warning(self, f"Sale saved, but the invoice could not be opened: {inv_err}")
 
             self._clear_cart()
+            self._clear_customer()
+            self.extra_discount_input.setText("0")
+            self.payment_mode_combo.setCurrentText("Cash")
+            self._focus_product_search()
 
         except Exception as e:
             session.rollback()
