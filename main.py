@@ -34,6 +34,13 @@ def _run_packaged_self_test() -> int:
         return 0
     except Exception:
         import traceback
+        error_text = traceback.format_exc()
+        try:
+            os.makedirs(config.DATA_DIR, exist_ok=True)
+            with open(os.path.join(config.DATA_DIR, "self_test_error.log"), "w", encoding="utf-8") as log:
+                log.write(error_text)
+        except OSError:
+            pass
         traceback.print_exc()
         return 2
 

@@ -10,6 +10,7 @@ class InstallerSafetyTests(unittest.TestCase):
         build_script = (ROOT / "build_installer.ps1").read_text(encoding="utf-8")
         self.assertTrue((ROOT / "Progressive Enterprises.spec").is_file())
         self.assertIn('"Progressive Enterprises.spec"', build_script)
+        self.assertIn("self_test_error.log", build_script)
 
     def test_installer_has_no_business_data_delete_rule(self):
         installer = (ROOT / "progressive.iss").read_text(encoding="utf-8").lower()

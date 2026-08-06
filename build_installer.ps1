@@ -144,6 +144,11 @@ try {
     $env:PROGRESSIVE_DATA_DIR = $selfTestDataDir
     $process = Start-Process -FilePath $appExe -ArgumentList "--self-test" -Wait -PassThru
     if ($process.ExitCode -ne 0) {
+        $selfTestError = Join-Path $selfTestDataDir "self_test_error.log"
+        if (Test-Path $selfTestError) {
+            Write-Host "Packaged self-test traceback:" -ForegroundColor Red
+            Get-Content -LiteralPath $selfTestError | Write-Host
+        }
         throw "Packaged application self-test failed with exit code $($process.ExitCode)."
     }
 } finally {
