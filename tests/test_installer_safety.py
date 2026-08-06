@@ -23,6 +23,7 @@ class InstallerSafetyTests(unittest.TestCase):
         for forbidden in (".env", "progressive.db", "settings.json", "prefs.json"):
             self.assertNotIn(forbidden, spec)
         self.assertIn('"assets"', spec)
+        self.assertNotIn('"pil"', spec)
 
     def test_installer_is_stable_per_user_upgrade(self):
         installer = (ROOT / "progressive.iss").read_text(encoding="utf-8").lower()
