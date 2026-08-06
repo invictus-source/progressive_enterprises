@@ -29,6 +29,11 @@ class InstallerSafetyTests(unittest.TestCase):
         self.assertIn("privilegesrequired=lowest", installer)
         self.assertIn("usepreviousappdir=yes", installer)
 
+    def test_installer_shortcuts_use_embedded_executable_icon(self):
+        installer = (ROOT / "progressive.iss").read_text(encoding="utf-8").lower()
+        self.assertIn("uninstalldisplayicon={app}\\{#myappexename}", installer)
+        self.assertNotIn("{app}\\assets\\logo.ico", installer)
+
 
 if __name__ == "__main__":
     unittest.main()

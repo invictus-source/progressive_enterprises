@@ -132,7 +132,7 @@ $appExe = Join-Path $appDir "Progressive Enterprises.exe"
 $qtPlatformPlugin = Join-Path $appDir "_internal\PySide6\plugins\platforms\qwindows.dll"
 if (-not (Test-Path $appExe)) { throw "Packaged executable is missing: $appExe" }
 if (-not (Test-Path $qtPlatformPlugin)) { throw "Qt Windows platform plugin is missing: $qtPlatformPlugin" }
-if (-not (Test-Path (Join-Path $appDir "assets\logo.ico"))) { throw "Packaged application icon is missing." }
+if (-not (Test-Path (Join-Path $appDir "_internal\assets\logo.ico"))) { throw "Packaged application icon is missing." }
 
 $qtConf = "[Paths]`r`nPlugins = ./_internal/PySide6/plugins`r`n"
 Set-Content -LiteralPath (Join-Path $appDir "qt.conf") -Value $qtConf -Encoding Ascii -NoNewline
